@@ -1,0 +1,2163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Returns &amp; Replacement Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Kantumruy+Pro:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4F5F7; --surface:#FFFFFF; --rule:#E2E5EA; --rule2:#CBD1DA; --hover:#F8F9FB;
+  --ink:#1A2433; --ink2:#465263; --ink3:#687385; --ink4:#9AA3B2; --navy:#1B2B44;
+  --r:8px; --font:'IBM Plex Sans','Kantumruy Pro','Khmer UI','Khmer OS System','Noto Sans Khmer',system-ui,sans-serif;
+}
+/* tones: every stage / status owns one */
+.t-ng  {--c:#B42318;--bg:#FEF3F2;--bd:#FCD3CD}
+.t-sup {--c:#B54708;--bg:#FFF7EA;--bd:#FCDDA8}
+.t-bl  {--c:#175CD3;--bg:#EFF5FF;--bd:#C2D8FA}
+.t-tl  {--c:#0B7480;--bg:#EDFAFB;--bd:#B0E3E7}
+.t-good{--c:#067647;--bg:#ECFBF2;--bd:#A9E9C3}
+.t-cn  {--c:#5925DC;--bg:#F5F2FF;--bd:#D8CEFB}
+.t-ink {--c:#1B2B44;--bg:#F1F3F6;--bd:#D5DAE2}
+.t-rj  {--c:#9E165F;--bg:#FDF1F7;--bd:#F5C6DE}
+.t-disp{--c:#475467;--bg:#EEF0F3;--bd:#D0D5DD}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{overflow-anchor:none;margin:0;font-family:var(--font);font-size:14px;line-height:1.45;color:var(--ink);background:var(--paper)}
+button,input,select,textarea{font:inherit;color:inherit}
+.num,td.r,.big{font-variant-numeric:tabular-nums}
+.kh{font-family:'Kantumruy Pro','Khmer UI','Khmer OS System','Noto Sans Khmer',sans-serif;font-weight:400}
+:focus-visible{outline:2px solid #4B7BEC;outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ---------- header ---------- */
+.hdr{background:var(--surface);border-bottom:1px solid var(--rule);position:sticky;top:calc(var(--hdrTopH,62px) * -1);z-index:30}
+.hdr-top{display:flex;align-items:center;gap:14px;padding:12px 24px;max-width:1400px;margin:0 auto}
+.mark{width:38px;height:38px;border-radius:9px;background:var(--navy);color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px;letter-spacing:.02em;flex:none}
+.co b{display:block;font-size:15px;font-weight:600;line-height:1.2}
+.co span{font-size:12.5px;color:var(--ink3)}
+.hdr-r{margin-left:auto;display:flex;align-items:center;gap:8px}
+.today{color:var(--ink3);font-size:13px;margin-right:6px}
+.chip{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 12px;border:1px solid var(--rule);border-radius:17px;background:#fff;cursor:pointer;font-size:13px;color:var(--ink2)}
+.chip:hover{background:var(--hover)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ink4);flex:none}
+.icon-btn{width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--rule);border-radius:8px;background:#fff;cursor:pointer;color:var(--ink2)}
+.icon-btn:hover{background:var(--hover)}
+.icon-btn.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+/* ---------- stage track (the navigation IS the flow) ---------- */
+.track-w{border-top:1px solid var(--rule);background:#FAFBFC}
+.track{display:flex;align-items:stretch;gap:12px;padding:10px 24px;max-width:1400px;margin:0 auto;overflow-x:auto;scrollbar-width:thin}
+.ov{display:flex;align-items:center;gap:8px;padding:0 16px;border-radius:8px;border:1px solid var(--rule);background:#fff;cursor:pointer;font-weight:500;color:var(--ink2);white-space:nowrap}
+.ov:hover{background:var(--hover)}
+.ov.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.stages{display:flex;flex:1;min-width:640px}
+.seg{flex:1;display:flex;align-items:center;gap:12px;padding:9px 30px 9px 30px;margin-left:-10px;background:var(--bg);color:var(--c);cursor:pointer;border:0;text-align:left;
+  clip-path:polygon(0 0,calc(100% - 16px) 0,100% 50%,calc(100% - 16px) 100%,0 100%,16px 50%);transition:background .15s,color .15s}
+.seg:first-child{margin-left:0;padding-left:16px;border-radius:8px 0 0 8px;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 50%,calc(100% - 16px) 100%,0 100%)}
+.seg:hover{filter:brightness(.97)}
+.seg.on{background:var(--c);color:#fff}
+.seg .no{width:24px;height:24px;border-radius:50%;border:1.5px solid currentColor;display:grid;place-items:center;font-size:12px;font-weight:600;flex:none}
+.seg .nm{font-weight:600;line-height:1.15}
+.seg .nm small{display:block;font-weight:400;font-size:12px;opacity:.85}
+.seg .ct{margin-left:auto;text-align:right;line-height:1.1}
+.seg .ct b{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
+.seg .ct small{display:block;font-size:11.5px;opacity:.85;white-space:nowrap}
+
+/* ---------- page ---------- */
+main{max-width:1400px;margin:0 auto;padding:24px 24px 40px}
+.ph{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.ph h1{font-size:23px;line-height:1.2;font-weight:600;margin:0;letter-spacing:-.01em}
+.ph h1 .kh{font-size:15px;color:var(--ink3);margin-left:10px}
+.ph p{margin:5px 0 0;color:var(--ink3);max-width:70ch}
+.ph .act{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+.panel{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r);margin-bottom:20px}
+.panel.edge{border-top:3px solid var(--c)}
+.p-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:13px 18px;border-bottom:1px solid var(--rule)}
+.p-h h2{font-size:15px;font-weight:600;margin:0}
+.p-h h2 .kh{font-size:13px;color:var(--ink3);margin-left:8px;font-weight:400}
+.p-h .note{color:var(--ink3);font-size:13px}
+.p-h .act{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.p-b{padding:18px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 18px;border-bottom:1px solid var(--rule);background:#FCFCFD}
+
+/* ---------- form ---------- */
+.fg{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px 14px;align-items:end}
+.fg .s2{grid-column:span 2}.fg .s3{grid-column:span 3}.fg .s6{grid-column:1/-1}
+@media(max-width:900px){.fg{grid-template-columns:repeat(2,minmax(0,1fr))}.fg .s2,.fg .s3{grid-column:span 2}}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:12.5px;font-weight:500;color:var(--ink2)}
+input,select,textarea{height:38px;padding:0 11px;border:1px solid var(--rule2);border-radius:7px;background:#fff;font-size:14px;min-width:0;width:100%}
+textarea{height:auto;padding:8px 11px}
+input[type=checkbox]{width:16px;height:16px;padding:0;accent-color:var(--navy)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#4B7BEC;box-shadow:0 0 0 3px #4B7BEC26}
+.search{position:relative;flex:1;min-width:220px}
+.search svg{position:absolute;left:11px;top:11px;color:var(--ink4)}
+.search input{padding-left:34px}
+.tools select{width:auto;min-width:150px}
+
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:38px;padding:0 15px;border:1px solid var(--rule2);border-radius:7px;background:#fff;font-weight:500;cursor:pointer;white-space:nowrap;color:var(--ink)}
+.btn:hover{background:var(--hover)}
+.btn.sm{height:30px;padding:0 10px;font-size:13px;border-radius:6px}
+.btn.solid{background:var(--c);border-color:var(--c);color:#fff}
+.btn.solid:hover{filter:brightness(1.08);background:var(--c)}
+.btn.soft{background:var(--bg);border-color:var(--bd);color:var(--c)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--ink3)}
+.btn.ghost:hover{background:var(--hover);color:var(--ink)}
+.btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+
+/* ---------- table ---------- */
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th{font-weight:500;color:var(--ink3);font-size:12.5px;text-align:left;padding:10px 12px;border-bottom:1px solid var(--rule);background:#FAFBFC;white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid #EEF0F3;vertical-align:middle}
+tbody tr:hover td{background:var(--hover)}
+th.r,td.r{text-align:right}
+th:first-child,td:first-child{padding-left:18px}
+th:last-child,td:last-child{padding-right:18px}
+tfoot td{font-weight:600;background:#FAFBFC;border-bottom:0;border-top:1px solid var(--rule)}
+.sub{font-size:12.5px;color:var(--ink3)}
+.prod b{font-weight:500;display:block}
+.nowrap{white-space:nowrap}
+.warn{color:#B42318;font-weight:500}
+tr.grp td{background:#FAFBFC;border-bottom:1px solid var(--rule);padding-top:12px;padding-bottom:12px}
+tr.grp:hover td{background:#FAFBFC}
+.grp-h{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.grp-h .meta{color:var(--ink3);font-size:13px}
+
+.req{font-weight:400;font-size:11px;color:#B42318;margin-left:4px}
+.imp-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.imp-sum div{border:1px solid var(--rule);border-radius:8px;padding:10px 12px;background:#FAFBFC}
+.imp-sum b{display:block;font-size:20px;font-weight:600}
+.imp-sum span{font-size:12px;color:var(--ink3)}
+.imp-sum .bad{border-color:#FCD3CD;background:#FEF3F2}.imp-sum .bad b{color:#B42318}
+/* floating search: pops up when the page's own search box scrolls away */
+.fs{position:fixed;top:calc(var(--navH,0px) + 10px);right:max(34px,calc((100vw - 1400px) / 2 + 34px));z-index:25;display:flex;align-items:center;justify-content:flex-end;gap:10px;pointer-events:none}
+.fs>*{pointer-events:auto}
+.fs-ret{height:52px;display:flex;align-items:center;gap:9px;padding:0 10px 0 18px;border:0;border-radius:999px;background:#B54708;color:#fff;font-size:14.5px;font-weight:600;white-space:nowrap;cursor:pointer;
+  box-shadow:0 2px 4px rgba(16,24,40,.08),0 12px 28px -10px rgba(181,71,8,.55);opacity:0;transform:scale(.4);transform-origin:right center;visibility:hidden;
+  transition:transform .2s cubic-bezier(.3,1.35,.6,1),opacity .15s,visibility 0s .2s}
+.fs.ret .fs-ret{opacity:1;transform:none;visibility:visible;transition:transform .2s cubic-bezier(.3,1.35,.6,1),opacity .15s,visibility 0s}
+.fs-ret:hover{background:#9C3D06}
+.fs-n{min-width:30px;height:30px;padding:0 8px;border-radius:15px;background:#fff;color:#B54708;display:grid;place-items:center;font-size:13.5px;font-variant-numeric:tabular-nums}
+.fs-ret.off{background:#98A2B3;box-shadow:0 2px 4px rgba(16,24,40,.08),0 12px 28px -10px rgba(16,24,40,.35)}
+.fs-ret.off .fs-n{color:#475467}
+.fs.open .fs-ret{display:none}
+.fs-btn{position:relative;width:52px;height:52px;border-radius:50%;border:1px solid var(--rule);background:#fff;color:var(--ink);display:grid;place-items:center;cursor:pointer;
+  box-shadow:0 2px 4px rgba(16,24,40,.06),0 12px 28px -10px rgba(16,24,40,.32);opacity:0;transform:scale(.4);visibility:hidden;
+  transition:transform .2s cubic-bezier(.3,1.35,.6,1),opacity .15s,visibility 0s .2s}
+.fs.show .fs-btn{opacity:1;transform:scale(1);visibility:visible;transition:transform .2s cubic-bezier(.3,1.35,.6,1),opacity .15s,visibility 0s}
+.fs-btn:hover{background:#F7F8FA}
+.fs-dot{position:absolute;top:10px;right:11px;width:10px;height:10px;border-radius:50%;background:var(--c,var(--navy));border:2px solid #fff;display:none}
+.fs.has .fs-dot{display:block}
+.fs-box{display:none;align-items:center;gap:10px;height:52px;width:min(440px,calc(100vw - 48px));padding:0 6px 0 18px;background:#fff;border:1.5px solid var(--c,var(--navy));border-radius:999px;
+  color:var(--ink3);box-shadow:0 2px 4px rgba(16,24,40,.06),0 14px 32px -10px rgba(16,24,40,.32);transform-origin:right center;animation:fsIn .18s ease-out}
+.fs.open .fs-btn{display:none}
+.fs.open .fs-box{display:flex}
+.fs-box input{flex:1;height:100%;border:0;padding:0;background:transparent;font-size:15px;color:var(--ink)}
+.fs-box input:focus{box-shadow:none}
+.fs-x{width:40px;height:40px;flex:none;border:0;border-radius:50%;background:transparent;color:var(--ink3);display:grid;place-items:center;cursor:pointer}
+.fs-x:hover{background:var(--hover);color:var(--ink)}
+@keyframes fsIn{from{opacity:0;transform:scaleX(.25)}to{opacity:1;transform:none}}
+/* supplier page tabs: rounded pill bar, selected tab is a filled pill with icon */
+.subbar{position:sticky;top:var(--navH,0px);z-index:20;background:var(--paper);padding:10px 0 12px;margin:-10px 0 6px}
+.subtabs{display:inline-flex;align-items:center;gap:4px;padding:6px;margin:0;background:#F1F3F6;border-radius:999px;
+  box-shadow:0 1px 2px rgba(16,24,40,.06),0 6px 18px -6px rgba(16,24,40,.14);max-width:100%;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+.subtabs::-webkit-scrollbar{display:none}
+.stab{display:flex;align-items:center;gap:8px;height:42px;padding:0 20px;border:0;border-radius:999px;background:transparent;cursor:pointer;
+  font-size:14.5px;font-weight:500;color:#465263;white-space:nowrap;transition:background .15s,color .15s}
+.stab:hover{background:rgba(16,24,40,.05);color:var(--ink)}
+.stab .stab-ic{display:none}
+.stab.on{background:color-mix(in srgb,var(--c) 13%,#fff);color:var(--c);font-weight:600}
+.stab.on .stab-ic{display:inline-flex}
+.stab-n{font-size:12.5px;font-weight:500;color:var(--ink3);font-variant-numeric:tabular-nums}
+.stab.on .stab-n{color:var(--c);opacity:.8}
+.stab:focus-visible{outline:2px solid #4B7BEC;outline-offset:2px}
+.sp-sec.off{display:none}
+/* lists like the POS: coloured header row that stays, scroll inside the box, pages at the bottom */
+.tw.lst{overflow:visible}
+.tw.lst.xs{overflow-x:auto}.tw.lst.xs thead th{position:static}
+.tw.lst thead th{position:sticky;top:var(--theadTop,0px);z-index:10;background:#1B2B44;color:#fff;font-weight:600;font-size:13px;border-bottom:0;padding-top:12px;padding-bottom:12px}
+.panel.edge .tw.lst thead th,.panel.tone .tw.lst thead th{background:var(--c)}
+.tw.lst thead input[type=checkbox]{accent-color:#fff}
+.tw.lst tfoot td{background:#F4F6F8}
+.tw.lst tbody tr:hover td{background:#F5F7FA}
+.tw.lst tr.grp td{background:#F8FAFC}
+.pager{display:flex;align-items:center;gap:16px;padding:10px 18px;border-top:1px solid var(--rule);flex-wrap:wrap;font-size:13.5px;color:var(--ink2)}
+.pg-size{display:flex;align-items:center;gap:8px;color:var(--ink3)}
+.pg-size select{width:auto;height:32px;padding:0 8px;font-size:13px}
+.pg-total{margin-left:auto;color:var(--ink2)}
+.pg-total b{color:var(--ink)}
+.pg-nav{display:flex;align-items:center;gap:6px}
+.pg-btn{width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--rule2);border-radius:7px;background:#fff;cursor:pointer;color:var(--ink)}
+.pg-btn:hover:not(:disabled){background:var(--hover)}
+.pg-btn:disabled{opacity:.4;cursor:not-allowed}
+.pg-cur{min-width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--c,#1B2B44);border-radius:7px;font-weight:600;color:var(--c,#1B2B44)}
+.pg-of{color:var(--ink3)}
+.pg-go{display:flex;gap:6px}
+.pg-go input{width:74px;height:32px;font-size:13px}
+@media(max-width:700px){.pg-total{margin-left:0}}
+/* badge */
+.badge{display:inline-flex;align-items:center;gap:6px;padding:2px 9px 2px 8px;border-radius:999px;font-size:12.5px;font-weight:500;background:var(--bg);color:var(--c);border:1px solid var(--bd);white-space:nowrap}
+.badge::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--c)}
+.badge.plain::before{display:none}
+.stk{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+.stk .sub{margin-bottom:3px}
+
+/* empty */
+.empty{padding:40px 20px;text-align:center;color:var(--ink3)}
+.empty svg{color:var(--ink4);margin-bottom:8px}
+.empty b{display:block;color:var(--ink);font-weight:500;margin-bottom:2px}
+
+/* bulk bar */
+.bulk{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 18px;background:#FFF7EA;border-bottom:1px solid #FCDDA8;color:#7A2E0E}
+.bulk[hidden]{display:none}
+
+/* ---------- overview ---------- */
+.flow{display:grid;grid-template-columns:minmax(120px,.8fr) 22px 1fr 22px 1fr 22px 1fr 22px minmax(120px,.8fr);align-items:center;gap:8px;padding:20px 18px}
+.fcol{display:flex;flex-direction:column;gap:10px}
+.fcol .lane{font-size:12.5px;color:var(--ink3);font-weight:500;text-align:center}
+.join{color:var(--ink4);display:grid;place-items:center}
+.node{border-radius:8px;padding:12px 14px;border:1px solid var(--bd);background:var(--bg);color:var(--c);cursor:pointer;text-align:left;width:100%}
+.node:hover{border-color:var(--c)}
+.node h3{margin:0;font-size:13px;font-weight:600}
+.node .big{display:block;font-size:30px;font-weight:600;line-height:1.15;margin-top:2px}
+.node small{display:block;color:var(--ink2);font-size:12.5px}
+.node.br{--c:var(--ink);--bg:#FAFBFC;--bd:var(--rule)}
+@media(max-width:1000px){.flow{grid-template-columns:1fr}.join{transform:rotate(90deg)}}
+
+.register{display:grid;grid-template-columns:repeat(9,minmax(0,1fr))}
+.reg{padding:14px 16px;border-right:1px solid var(--rule);cursor:pointer;background:#fff;border-top:0;border-bottom:0;border-left:0;text-align:left}
+.reg:last-child{border-right:0}
+.reg:hover{background:var(--hover)}
+.reg .lb{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:500;color:var(--c)}
+.reg .lb::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c)}
+.reg .big{display:block;font-size:26px;font-weight:600;margin-top:4px;color:var(--ink)}
+.reg small{color:var(--ink3);font-size:12.5px}
+@media(max-width:1250px){.register{grid-template-columns:repeat(5,minmax(0,1fr))}.reg{border-bottom:1px solid var(--rule)}}
+@media(max-width:600px){.register{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.alerts{list-style:none;margin:0;padding:0}
+.alerts li{display:flex;align-items:center;gap:12px;padding:11px 18px;border-bottom:1px solid #EEF0F3}
+.alerts li:last-child{border-bottom:0}
+.alerts .ic{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:var(--bg);color:var(--c);flex:none}
+.alerts .tx{flex:1}
+
+/* settings */
+.set-grid{display:grid;grid-template-columns:240px 1fr;gap:24px;padding:20px 18px;border-bottom:1px solid var(--rule)}
+.set-grid:last-child{border-bottom:0}
+.set-grid h3{margin:0 0 4px;font-size:14px;font-weight:600}
+.set-grid p{margin:0;color:var(--ink3);font-size:13px}
+@media(max-width:800px){.set-grid{grid-template-columns:1fr;gap:12px}}
+
+/* ---------- modal & toast ---------- */
+#ov{position:fixed;inset:0;background:rgba(16,24,40,.45);display:none;align-items:flex-start;justify-content:center;padding:6vh 14px;z-index:50;overflow:auto}
+#ov.on{display:flex}
+.mdl{background:#fff;border-radius:12px;width:100%;max-width:560px;box-shadow:0 24px 48px -12px rgba(16,24,40,.25)}
+.mdl-h{display:flex;gap:12px;align-items:flex-start;padding:18px 20px 14px;border-bottom:1px solid var(--rule)}
+.mdl-h h3{margin:0;font-size:17px;font-weight:600}
+.mdl-h p{margin:4px 0 0;color:var(--ink3);font-size:13.5px}
+.mdl-h .icon-btn{margin-left:auto;border:0}
+.mdl-b{padding:18px 20px}
+.mdl-b .fg{grid-template-columns:1fr 1fr}
+.mdl-b .fg .s2{grid-column:1/-1}
+.mdl-f{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid var(--rule);background:#FAFBFC;border-radius:0 0 12px 12px}
+.info{border:1px solid var(--bd);background:var(--bg);border-radius:8px;padding:12px 14px;margin-top:14px;color:var(--ink2)}
+.info b{color:var(--c)}
+#toasts{position:fixed;bottom:18px;right:18px;display:flex;flex-direction:column;gap:8px;z-index:60}
+.toast{display:flex;align-items:center;gap:10px;background:var(--ink);color:#fff;padding:11px 16px;border-radius:9px;font-size:13.5px;box-shadow:0 8px 24px rgba(16,24,40,.2);max-width:380px;animation:tin .18s ease-out}
+.toast.err{background:#B42318}
+@keyframes tin{from{opacity:0;transform:translateY(6px)}}
+
+/* ---------- account menu ---------- */
+.um{position:absolute;z-index:46;width:240px;background:#fff;border:1px solid var(--rule);border-radius:12px;box-shadow:0 16px 40px -8px rgba(16,24,40,.22);padding:6px;animation:tin .12s ease-out}
+.um-h{display:flex;align-items:center;gap:10px;padding:10px 10px 12px;border-bottom:1px solid var(--rule);margin-bottom:6px}
+.um-h b{display:block;font-weight:600;line-height:1.2}
+.um-h small{color:var(--ink3);font-size:12.5px}
+.um button{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:0;border-radius:8px;background:transparent;cursor:pointer;color:var(--ink);text-align:left;font-weight:500}
+.um button:hover,.um button:focus-visible{background:var(--hover);outline:none}
+.um .um-out{color:#B42318}
+.um .um-out:hover,.um .um-out:focus-visible{background:#FEF3F2}
+
+/* ---------- time filter ---------- */
+.tbtn-w{position:relative;display:flex}
+.tbtn{display:flex;align-items:center;gap:9px;height:38px;min-width:210px;padding:0 12px;border:1px solid var(--rule2);border-radius:7px;background:#fff;cursor:pointer;text-align:left;color:var(--ink2)}
+.tbtn:hover{background:var(--hover)}
+.tbtn.on{border-color:var(--navy);color:var(--ink);box-shadow:0 0 0 1px var(--navy) inset;padding-right:34px}
+.tb-tx{display:flex;flex-direction:column;line-height:1.15}
+.tb-tx b{font-weight:500;font-size:13.5px;color:var(--ink)}
+.tb-tx small{font-size:11.5px;color:var(--ink3)}
+.tclr{position:absolute;right:6px;top:7px;width:24px;height:24px;border:0;border-radius:6px;background:transparent;color:var(--ink3);display:grid;place-items:center;cursor:pointer}
+.tclr:hover{background:#EEF0F3;color:var(--ink)}
+.rp{position:absolute;z-index:40;background:#fff;border:1px solid var(--rule);border-radius:12px;box-shadow:0 16px 40px -8px rgba(16,24,40,.22);animation:tin .14s ease-out}
+.rp-pre{padding:16px 18px 14px;width:560px;max-width:calc(100vw - 20px)}
+.rp-top{display:flex;gap:8px;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid var(--rule)}
+.rp-top button{height:32px;padding:0 12px;border:1px solid var(--rule2);border-radius:16px;background:#fff;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px;color:var(--ink)}
+.rp-top button:hover{background:var(--hover)}
+.rp-top button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.rp-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rp-cols h4{margin:0 0 6px;font-size:12px;font-weight:600;color:var(--ink3)}
+.rp-cols button{display:block;width:100%;text-align:left;padding:6px 8px;border:0;border-radius:6px;background:transparent;color:#175CD3;cursor:pointer;font-size:13.5px}
+.rp-cols button:hover{background:#EFF5FF}
+.rp-cols button.on{background:#175CD3;color:#fff}
+.rp-cal{padding:12px 14px;width:600px;max-width:calc(100vw - 20px)}
+.rp-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.rp-nav .icon-btn{border:0}
+.cals{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.cal-h{text-align:center;font-weight:600;font-size:13.5px;margin:-30px 0 10px;pointer-events:none}
+.cal-g{display:grid;grid-template-columns:repeat(7,1fr);gap:2px 0}
+.cal-g span{font-size:11.5px;font-weight:600;color:var(--ink3);text-align:center;padding:4px 0}
+.cal-g .d{height:34px;border:0;background:transparent;cursor:pointer;font-size:13px;color:var(--ink);font-variant-numeric:tabular-nums}
+.cal-g .d:hover{background:#EEF2F8;border-radius:6px}
+.cal-g .d.out{color:#B5BCC7}
+.cal-g .d.td{font-weight:700;text-decoration:underline;text-underline-offset:3px}
+.cal-g .d.in{background:#E8EEF8;border-radius:0}
+.cal-g .d.lo,.cal-g .d.hi{background:var(--navy);color:#fff}
+.cal-g .d.lo{border-radius:6px 0 0 6px}.cal-g .d.hi{border-radius:0 6px 6px 0}.cal-g .d.lo.hi{border-radius:6px}
+.rp-foot{display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--rule)}
+.rp-foot span{margin-right:auto;font-size:13px;color:var(--ink2);font-variant-numeric:tabular-nums}
+@media(max-width:640px){.rp-cols{grid-template-columns:1fr 1fr}.cals{grid-template-columns:1fr}.cals .cal:last-child{display:none}}
+
+/* ---------- settings layout ---------- */
+.set-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:20px;align-items:start}
+.set-nav{display:flex;flex-direction:column;gap:2px;position:sticky;top:calc(var(--navH,0px) + 16px)}
+.set-nav button{display:flex;align-items:center;gap:10px;padding:10px 12px;border:0;border-radius:8px;background:transparent;color:var(--ink2);font-weight:500;cursor:pointer;text-align:left}
+.set-nav button:hover{background:#E9ECF1;color:var(--ink)}
+.set-nav button.on{background:var(--surface);color:var(--ink);box-shadow:inset 3px 0 0 var(--navy),0 0 0 1px var(--rule)}
+.sec.off{display:none}
+.fg .s4{grid-column:span 4}
+.fbtn{display:flex;align-items:flex-end;justify-content:flex-end}
+@media(max-width:900px){.fg .s4{grid-column:span 2}}
+.sec-foot{display:flex;justify-content:flex-end;padding:14px 18px;border-top:1px solid var(--rule);background:#FAFBFC;border-radius:0 0 var(--r) var(--r)}
+@media(max-width:900px){.set-layout{grid-template-columns:1fr}.set-nav{flex-direction:row;overflow-x:auto;position:static}.set-nav button{white-space:nowrap}}
+.avatar{width:32px;height:32px;border-radius:50%;background:#E4E9F2;color:var(--navy);display:inline-grid;place-items:center;font-size:12px;font-weight:600;flex:none}
+.avatar.sm{width:22px;height:22px;font-size:10px}
+.avatar.lg{width:56px;height:56px;font-size:19px}
+.ucell{display:flex;align-items:center;gap:10px}
+tr.dim td{opacity:.6}
+.acct{display:flex;align-items:center;gap:18px;padding:22px 18px;flex-wrap:wrap}
+.acct-info{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+.acct-info b{font-size:17px}
+.acct-info>span:first-of-type{color:var(--ink3)}
+.acct-act{margin-left:auto;display:flex;gap:8px}
+/* privileges: list + editor */
+.roles{display:grid;grid-template-columns:260px minmax(0,1fr);min-height:420px}
+.role-list{border-right:1px solid var(--rule);padding:10px;display:flex;flex-direction:column;gap:4px;background:#FAFBFC;border-radius:0 0 0 var(--r)}
+.role-item{display:flex;flex-direction:column;gap:4px;text-align:left;padding:11px 12px;border:1px solid transparent;border-radius:8px;background:transparent;cursor:pointer;color:var(--ink)}
+.role-item:hover{background:#fff;border-color:var(--rule)}
+.role-item.on{background:#fff;border-color:var(--rule2);box-shadow:inset 3px 0 0 var(--navy)}
+.ri-top{display:flex;align-items:center;gap:6px}.ri-top b{font-weight:600}
+.lock{color:var(--ink3);display:inline-flex}
+.ri-sub{font-size:12px;color:var(--ink3)}
+.meter{height:4px;border-radius:2px;background:#E4E7EC;overflow:hidden;margin-top:2px}
+.meter span{display:block;height:100%;background:var(--navy);border-radius:2px}
+.role-edit{padding:18px 22px;min-width:0}
+.re-head{display:flex;align-items:flex-end;gap:10px;margin-bottom:12px}
+.re-head input{font-size:15px;font-weight:600}
+.re-users{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:13px;color:var(--ink3);margin-bottom:16px}
+.uchip{display:inline-flex;align-items:center;gap:6px;padding:2px 10px 2px 3px;border:1px solid var(--rule);border-radius:999px;color:var(--ink);background:#fff}
+.pg{border:1px solid var(--rule);border-radius:10px;margin-bottom:12px;overflow:hidden}
+.pg-h{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg);border-bottom:1px solid var(--rule)}
+.pg-h b{color:var(--c);font-weight:600}
+.pg-h .btn{margin-left:auto}
+.pg-dot{width:9px;height:9px;border-radius:50%;background:var(--c)}
+.prow{display:flex;align-items:center;gap:16px;padding:12px 14px;border-bottom:1px solid #EEF0F3;cursor:pointer;background:#fff}
+.prow:last-child{border-bottom:0}
+.prow:hover{background:var(--hover)}
+.ptx{flex:1;display:flex;flex-direction:column;gap:2px}
+.ptx b{font-weight:500}
+.ptx span{font-size:12.5px;color:var(--ink3)}
+.switch{position:relative;width:40px;height:22px;flex:none}
+.switch input{position:absolute;inset:0;opacity:0;margin:0;width:100%;height:100%;cursor:pointer;z-index:1}
+.switch span{position:absolute;inset:0;border-radius:11px;background:#D0D5DD;transition:background .15s}
+.switch span::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(16,24,40,.2);transition:transform .15s}
+.switch input:checked+span{background:var(--navy)}
+.switch input:checked+span::after{transform:translateX(18px)}
+.switch input:disabled+span{opacity:.55}
+.switch input:focus-visible+span{outline:2px solid #4B7BEC;outline-offset:2px}
+.re-foot{display:flex;align-items:center;gap:8px;justify-content:flex-end;position:sticky;bottom:0;background:#fff;padding-top:14px;margin-top:4px;border-top:1px solid var(--rule)}
+.re-foot .sub{margin-right:auto}
+@media(max-width:1000px){.roles{grid-template-columns:1fr}.role-list{border-right:0;border-bottom:1px solid var(--rule);flex-direction:row;overflow-x:auto}.role-item{min-width:180px}}
+
+/* ---------- sign in ---------- */
+#auth{position:fixed;inset:0;z-index:45;background:var(--paper);display:grid;place-items:center;padding:20px;overflow:auto}
+.auth-card{background:#fff;border:1px solid var(--rule);border-radius:14px;width:100%;max-width:420px;padding:30px 28px 26px}
+.auth-card .mark{margin-bottom:16px;width:46px;height:46px;font-size:16px}
+.auth-card h1{font-size:21px;margin:0 0 4px;font-weight:600}
+.auth-card p{margin:0 0 20px;color:var(--ink3)}
+.auth-card form{display:flex;flex-direction:column;gap:14px}
+.auth-card .btn{height:42px;margin-top:4px}
+.auth-alt{display:flex;flex-direction:column;gap:8px;margin-top:20px;padding-top:18px;border-top:1px solid var(--rule)}
+.auth-alt .btn{margin:0;justify-content:center}
+.auth-card .info{margin:0 0 16px}
+.pinbox{letter-spacing:.35em;font-size:18px}
+.pinbox::placeholder{letter-spacing:normal;font-size:13.5px;color:var(--ink4)}
+.perm-tb td,.perm-tb th{text-align:center}
+.perm-tb td:first-child,.perm-tb th:first-child{text-align:left}
+.perm-tb input{width:17px;height:17px}
+.role-h{display:flex;flex-direction:column;align-items:center;gap:2px}
+.role-h input{height:30px;font-size:12.5px;text-align:center;font-weight:600;padding:0 6px;width:130px}
+.store-pick{display:flex;flex-wrap:wrap;gap:6px 16px}
+.store-pick label{display:flex;align-items:center;gap:6px;font-size:13.5px;color:var(--ink)}
+
+/* ---------- print (RTV document) ---------- */
+#print{display:none}
+@media print{
+  body{background:#fff}
+  .app,#ov,#toasts,#fs{display:none!important}
+  #print{display:block;font-size:12px;color:#000}
+  @page{size:A4;margin:0}
+  #print{padding:14mm 14mm 12mm}
+}
+.doc-h{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:14px}
+.doc-h .co{font-size:22px;font-weight:700;line-height:1.2}
+.doc-h .doc-app{font-size:16px;font-weight:600;margin-top:2px}
+.doc-h .pd{font-size:12px;font-weight:400;color:#333;margin-top:6px}
+.doc-h .ti{text-align:right;font-size:20px;font-weight:700}
+.doc-h .ti small{display:block;font-size:12px;font-weight:400}
+.doc-meta{display:grid;grid-template-columns:1fr 1fr;gap:4px 24px;margin-bottom:14px}
+.doc-meta div{display:flex;gap:8px}.doc-meta span{width:110px;color:#444}
+.doc table{font-size:11.5px}
+.doc th{background:#eee;color:#000;border:1px solid #999;padding:5px 6px;font-size:11px}
+.doc td{border:1px solid #999;padding:5px 6px}
+.sign{display:grid;grid-template-columns:repeat(3,1fr);gap:40px;margin-top:110px}
+.sign div{border-top:1px solid #000;padding-top:6px;text-align:center}
+
+@media(max-width:700px){
+  .hdr-top{padding:10px 14px;gap:10px}.track{padding:8px 14px}main{padding:18px 14px 70px}
+  .today,.co span,#modeTx,#opName{display:none}
+  .chip{width:34px;padding:0;justify-content:center}
+  .ov{padding:0 12px}.ov span{display:none}
+  .stages{min-width:680px}.seg .nm{white-space:nowrap}
+  .ph .act{width:100%}.ph .act > *{flex:1}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="hdr">
+    <div class="hdr-top">
+      <div class="mark" id="mark">BT</div>
+      <div class="co"><b id="coName">Company</b><span>Returns &amp; replacement control <span class="kh" style="margin-left:6px">គ្រប់គ្រងទំនិញខូច និងទំនិញប្តូរ</span></span></div>
+      <div class="hdr-r">
+        <span class="today" id="today"></span>
+        <button class="chip" id="modeChip" title="Where data is saved"><span class="dot" id="modeDot"></span><span id="modeTx">Connecting</span></button>
+        <button class="chip" id="opBtn" title="Your account"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg><span id="opName">Set your name</span></button>
+        <button class="icon-btn" data-go="settings" id="setBtn" title="Settings" aria-label="Settings"></button>
+      </div>
+    </div>
+    <div class="track-w">
+      <nav class="track" id="track" aria-label="Product flow">
+        <button class="ov" data-go="dash"></button>
+        <div class="stages">
+          <button class="seg t-ng" data-go="ng"></button>
+          <button class="seg t-sup" data-go="sup"></button>
+          <button class="seg t-good" data-go="good"></button>
+        </div>
+      </nav>
+    </div>
+  </header>
+  <main id="view"></main>
+  <div id="endPad" aria-hidden="true"></div>
+</div>
+<div id="auth" hidden></div>
+<div id="ov"></div>
+<div id="toasts"></div>
+<div id="print"></div>
+<datalist id="supList"></datalist>
+
+<script>
+/* ================= helpers ================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const money = n => '$' + (+n || 0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const num = n => (+n || 0).toLocaleString('en-US');
+const days = d => d ? Math.max(0, Math.floor((new Date(today()) - new Date(d)) / 864e5)) : 0;
+const fmtD = d => d ? new Date(d + 'T00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '';
+const clone = o => JSON.parse(JSON.stringify(o));
+const lsGet = (k, d) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+const sum = (a, f) => a.reduce((s, r) => s + (+f(r) || 0), 0);
+const plural = (n, w) => `${num(n)} ${w}${n === 1 ? '' : 's'}`;
+
+const IC = {
+  grid:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  chev:'<path d="m9 6 6 6-6 6"/>',
+  x:'<path d="M6 6l12 12M18 6 6 18"/>',
+  copy:'<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+  dl:'<path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/>',
+  ul:'<path d="M12 20V9m0 0-4 4m4-4 4 4M5 4h14"/>',
+  print:'<path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/>',
+  undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>',
+  edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+  trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  swap:'<path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/>',
+  receipt:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
+  truck:'<path d="M3 6h11v10H3zM14 9h4l3 3v4h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>',
+  alert:'<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  box:'<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
+  check:'<path d="m5 12 5 5L20 7"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>',
+  shield:'<path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6z"/><path d="m9 12 2 2 4-4"/>',
+  key:'<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M15 8l2 2"/>',
+  db:'<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+  lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+};
+const ic = (n, s = 16) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
+
+function toast(msg, err) {
+  const t = document.createElement('div'); t.className = 'toast' + (err ? ' err' : '');
+  t.innerHTML = (err ? ic('alert') : ic('check')) + `<span>${msg}</span>`;
+  const box = $('#toasts'); box.appendChild(t); while (box.children.length > 3) box.firstChild.remove(); setTimeout(() => t.remove(), err ? 5500 : 2800);
+}
+
+/* ================= Firebase (shared live data for all devices) =================
+   Paste the config of your Firebase web app here:
+   Firebase console → Project settings → General → Your apps → SDK setup and configuration → Config.
+   Leave apiKey empty to keep data only in this browser. */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCM9xnAS4d32CuMRshOhmjkitPmt4w_g2k",
+  authDomain: "babytown-55b45.firebaseapp.com",
+  projectId: "babytown-55b45",
+  storageBucket: "babytown-55b45.firebasestorage.app",
+  messagingSenderId: "773828999625",
+  appId: "1:773828999625:web:19892ab63b8fb0b27d5018"
+};
+const FB_ON = !!(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId);
+const FB_SDK = 'https://www.gstatic.com/firebasejs/10.14.1/firebase-';
+let FS = null;   /* Firestore, when connected */
+
+/* ================= data ================= */
+const S = { ng: new Map(), good: new Map(), suppliers: new Map(), settings: new Map(), users: new Map(), roles: new Map() };
+let DB = null, readOnly = false;
+const LS = 'ngGoodStock_v1';
+
+const cfg = () => S.settings.get('app') || {};
+const BR = () => (Array.isArray(cfg().branches) && cfg().branches.length ? cfg().branches : ['BT1-TPR','BT2-PS']);
+const company = () => cfg().company || 'Baby Town';
+const LIMITS = { ageWH: 14, ageSup: 30, ageCN: 30, ageGood: 7, ageRej: 7 };
+const lim = k => +cfg()[k] > 0 ? +cfg()[k] : LIMITS[k];
+const operator = () => ME?.name || '';
+
+/* ================= users & privileges ================= */
+const PERMS = [
+  ['ng.add',       'Receive Not Good from branch', 'Add new lines at the warehouse'],
+  ['ng.edit',      'Edit lines', 'Change a line before it is returned to the supplier'],
+  ['ng.delete',    'Delete lines', 'Delete Not Good lines and good stock received manually'],
+  ['ng.return',    'Return to supplier', 'Tick lines, create the RTV and print it'],
+  ['sup.settle',   'Settle with supplier', 'Exchange, Credit note or Rejected'],
+  ['cn.deduct',    'Mark credit notes deducted', 'Enter the invoice the CN was taken off'],
+  ['disp.mark',    'Mark disposed', 'Record disposal of rejected product'],
+  ['good.receive', 'Receive good product', 'Add good product that is not from an exchange'],
+  ['good.send',    'Send to store', 'Transfer good product to a store'],
+  ['undo',         'Undo', 'Undo any step, including completed lines'],
+  ['export',       'Export', 'Copy for Excel and Export CSV'],
+  ['backup',       'Download backup', 'Download a copy of all data as a backup file'],
+  ['set.company',  'Company name', 'Change the company name shown in the app and on RTV documents'],
+  ['set.branches', 'Branches / stores', 'Add, rename or remove branches and stores'],
+  ['set.limits',   'Alert limits', 'Change the days before a line shows as overdue'],
+  ['set.suppliers','Supplier list', 'Add, edit and remove suppliers and their contacts'],
+  ['adm.users',    'Manage users', 'Add users, edit them, reset PINs, set active or inactive'],
+  ['adm.roles',    'Change privileges', 'Create, edit and delete privileges'],
+  ['adm.restore',  'Restore backup', 'Load a backup file into the app'],
+  ['adm.wipe',     'Delete all data', 'Remove every line, supplier, user and setting'],
+  ['adm.import',   'Import from Excel', 'Load lines and suppliers from the Excel master list'],
+  ['pin.self',     'Change own PIN', 'Change the PIN of their own account'],
+];
+const DEFAULT_ROLES = [
+  { id: 'gm',   name: 'General Manager',   perms: PERMS.map(p => p[0]), locked: true },
+  { id: 'wh',   name: 'Warehouse Officer', perms: ['ng.add','ng.edit','ng.return','sup.settle','good.receive','good.send','export'] },
+  { id: 'sm',   name: 'Store Manager',     perms: ['ng.add','ng.edit','export'] },
+  { id: 'acc',  name: 'Accounting',        perms: ['cn.deduct','export'] },
+  { id: 'view', name: 'Viewer',            perms: [] },
+];
+let ME = null;
+/* older saved privileges had one 'settings' permission: it becomes the four separate ones */
+const SET_KEYS = ['set.company','set.branches','set.limits','set.suppliers'];
+const ADM_KEYS = ['adm.users','adm.roles','adm.restore','adm.wipe','adm.import'];
+const normRole = r => { let p = r.perms || [];
+  if (p.includes('settings')) p = [...p.filter(x => x !== 'settings'), ...SET_KEYS];
+  if (p.includes('users')) p = [...p.filter(x => x !== 'users'), ...ADM_KEYS];
+  if (!r.locked && (r.v || 0) < 3 && p.includes('ng.add') && !p.includes('ng.edit')) p = [...p, 'ng.edit'];
+  return p === r.perms ? r : { ...r, perms: [...new Set(p)] }; };
+const roles = () => (S.roles.size ? [...S.roles.values()].sort((a,b) => (a.order ?? 99) - (b.order ?? 99)) : DEFAULT_ROLES).map(normRole);
+const roleOf = u => roles().find(r => r.id === u?.role);
+const can = p => !!ME && (ME.role === 'gm' || (roleOf(ME)?.perms || []).includes(p));
+const allStores = u => !u || u.role === 'gm' || (u.outlets || []).includes('ALL');
+const canSee = b => allStores(ME) || (ME.outlets || []).includes(b);
+const myBR = () => BR().filter(canSee);
+const NG = () => [...S.ng.values()].filter(r => canSee(r.branch));
+async function hashPin(pin, salt) {
+  try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin));
+    return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); }
+  catch { let h = 7; for (const c of salt + ':' + pin) h = (h * 31 + c.charCodeAt(0)) | 0; return 'x' + h; }
+}
+const ssGet = k => { try { return sessionStorage.getItem(k); } catch { return null; } };
+const ssSet = (k, v) => { try { v == null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch {} };
+
+/* one-time rename of old branch codes: BT1 -> BT1-TPR, BT2 -> BT2-PS */
+const RENAME = { BT1: 'BT1-TPR', BT2: 'BT2-PS' };
+let migrated = false;
+async function migrateBranches() {
+  if (migrated) return; migrated = true;
+  const fix = v => RENAME[v] || v, jobs = [];
+  for (const r of S.ng.values()) if (RENAME[r.branch]) jobs.push(['ng', { ...clone(r), branch: fix(r.branch) }]);
+  for (const g of S.good.values()) {
+    if (RENAME[g.fromBranch] || (g.dispatches||[]).some(d => RENAME[d.branch]))
+      jobs.push(['good', { ...clone(g), fromBranch: fix(g.fromBranch), dispatches: (g.dispatches||[]).map(d => ({ ...d, branch: fix(d.branch) })) }]);
+  }
+  const c = cfg();
+  if (Array.isArray(c.branches) && c.branches.some(b => RENAME[b])) jobs.push(['settings', { ...clone(c), branches: c.branches.map(fix) }]);
+  if (!jobs.length) return;
+  if (DB) { for (const [col, rec] of jobs) await put(col, rec); }
+  else { jobs.forEach(([col, rec]) => S[col].set(rec.id, rec)); saveLocal(); refresh(); }
+}
+function loadLocal() { try { const o = JSON.parse(lsGet(LS,'{}')); for (const k in S) (o[k]||[]).forEach(r => S[k].set(r.id, r)); } catch {} }
+function saveLocal() { const o = {}; for (const k in S) o[k] = [...S[k].values()]; lsSet(LS, JSON.stringify(o)); }
+
+async function put(col, rec) {
+  rec.updatedAt = Date.now(); if (ME && col !== 'users') rec.updatedBy = ME.name; S[col].set(rec.id, rec); refresh();
+  if (!DB) return saveLocal();
+  if (FS) { FS.collection(col).doc(rec.id).set(rec).catch(writeErr); return; }
+  try { await DB.collection(col).doc(rec.id).set(rec); } catch (e) { writeErr(e); }
+}
+async function remove(col, id) {
+  S[col].delete(id); refresh();
+  if (!DB) return saveLocal();
+  if (FS) { FS.collection(col).doc(id).delete().catch(writeErr); return; }
+  try { await DB.collection(col).doc(id).delete(); } catch (e) { writeErr(e); }
+}
+/* many records at once (restore, import, delete all): one screen update, Firebase writes in batches */
+async function putMany(list) {
+  if (!DB) { list.forEach(([c, r]) => S[c].set(r.id, r)); saveLocal(); refresh(); return; }
+  if (!FS) { for (const [c, r] of list) await put(c, r); return; }
+  list.forEach(([c, r]) => S[c].set(r.id, r)); refresh();
+  for (let i = 0; i < list.length; i += 400) { const b = FS.batch(); list.slice(i, i + 400).forEach(([c, r]) => b.set(FS.collection(c).doc(r.id), r)); b.commit().catch(writeErr); }
+}
+async function removeMany(list) {
+  if (!DB) { list.forEach(([c, id]) => S[c].delete(id)); saveLocal(); refresh(); return; }
+  if (!FS) { for (const [c, id] of list) await remove(c, id); return; }
+  list.forEach(([c, id]) => S[c].delete(id)); refresh();
+  for (let i = 0; i < list.length; i += 400) { const b = FS.batch(); list.slice(i, i + 400).forEach(([c, id]) => b.delete(FS.collection(c).doc(id))); b.commit().catch(writeErr); }
+}
+function writeErr(e) {
+  if (e?.code === 'permission-denied') { toast('This device is not allowed to save. Ask the General Manager to connect it again.', 1); return; }
+  if (e?.code === 'resource-exhausted') { toast('The free daily Firebase limit is used up. Changes sync again tomorrow.', 1); return; }
+  if (e?.code === 'invalid_argument') { readOnly = true; setMode('readonly'); toast('You have view-only access. Changes were not saved.', 1); }
+  else if (e?.code === 'quota_exceeded') toast('Storage is full: ' + e.message, 1);
+  else toast('Could not save (' + (e?.code || e) + '). Try again.', 1);
+}
+const guard = () => { if (readOnly) { toast('You have view-only access.', 1); return true; } return false; };
+let MODE = 'connecting';
+function setMode(m) {
+  MODE = m;
+  const map = { local:['Saved in this browser','#B54708'], connecting:['Connecting','#9AA3B2'], online:['Live, shared','#067647'],
+    slow:['Can’t reach data yet','#B42318'], error:['Connection lost, reload','#B42318'], readonly:['View only','#687385'],
+    offline:['Offline, will sync','#B54708'] };
+  const [t, c] = map[m] || [m, '#9AA3B2'];
+  $('#modeTx').textContent = t; $('#modeDot').style.background = c;
+}
+
+function lookup(bc) {
+  if (!bc) return null; let best = null;
+  for (const r of [...S.ng.values(), ...S.good.values()]) if (r.barcode === bc && (!best || (r.createdAt||0) > (best.createdAt||0))) best = r;
+  return best;
+}
+function supplierNames() {
+  const s = new Set([...S.suppliers.values()].map(x => x.name));
+  for (const r of S.ng.values()) r.supplier && s.add(r.supplier);
+  for (const r of S.good.values()) r.supplier && s.add(r.supplier);
+  return [...s].sort((a,b) => a.localeCompare(b));
+}
+const goodSent = (g, br) => (g.dispatches||[]).filter(d => !br || d.branch === br).reduce((a,d) => a + (+d.qty||0), 0);
+const goodBal = g => (+g.qty||0) - goodSent(g);
+const val = r => (+r.qty||0) * (+r.cost||0);
+
+/* ================= statuses (one source of truth) ================= */
+const STATUSES = [
+  ['WH',  'At Warehouse',         't-ng',   'នៅឃ្លាំង'],
+  ['SUP', 'At Supplier',          't-sup',  'នៅអ្នកផ្គត់ផ្គង់'],
+  ['EXC', 'Exchanged',            't-bl',   'បានដូរ មិនទាន់បញ្ជូន'],
+  ['CNP', 'Pending deduction',    't-cn',   'រង់ចាំកាត់ប្រាក់'],
+  ['DED', 'Deducted',             't-good', 'បានកាត់ប្រាក់'],
+  ['PART','Partly sent to store', 't-tl',   'បញ្ជូនខ្លះ'],
+  ['DONE','Completed',            't-good', 'បានបញ្ចប់'],
+  ['REJ', 'Rejected',             't-rj',   'អ្នកផ្គត់ផ្គង់បដិសេធ'],
+  ['DISP','Disposed',             't-disp', 'បានបំផ្លាញ'],
+];
+const SDEF = Object.fromEntries(STATUSES.map(s => [s[0], s]));
+function stInfo(r) {
+  const out = [];
+  const add = (k, sub) => out.push([k, sub]);
+  if (r.status === 'WH') add('WH', `${plural(days(r.date),'day')} in warehouse`);
+  if (r.status === 'SUP') add('SUP', `${esc(r.rtvNo||'')}, ${plural(days(r.rtvDate),'day')}`);
+  if (r.status === 'EXC') {
+    const g = r.goodId && S.good.get(r.goodId);
+    if (g) {
+      const bal = goodBal(g), sent = BR().filter(b => goodSent(g,b) > 0).map(b => `${esc(b)} ${goodSent(g,b)}`).join(', ');
+      if (bal <= 0) add('DONE', `Sent to ${sent}`);
+      else if (sent) add('PART', `Sent ${sent}, ${bal} left in warehouse`);
+      else add('EXC', `${bal} pcs in warehouse, not sent`);
+    }
+  }
+  if (r.status === 'REJ') r.dispDate ? add('DISP', `${fmtD(r.dispDate)}, loss ${money(val(r))}`) : add('REJ', `${esc(r.rejReason||'')}${r.rejReason?', ':''}${plural(days(r.settleDate),'day')} waiting for disposal`);
+  if (r.cnNo) r.cnStatus === 'deducted' ? add('DED', `${esc(r.cnNo)} on ${esc(r.invNo||'')}`) : add('CNP', `${esc(r.cnNo)}, ${money(r.cnAmount)}`);
+  if (!out.length) add('DONE', '');
+  return out;
+}
+const badge = k => `<span class="badge ${SDEF[k][2]}">${SDEF[k][1]}</span>`;
+const pill = r => `<div class="stk">${stInfo(r).map(([k,sub]) => badge(k) + (sub ? `<div class="sub">${sub}</div>` : '')).join('')}</div>`;
+const stKey = r => stInfo(r).map(x => x[0]);
+const stText = r => stInfo(r).map(x => SDEF[x[0]][1]).join(' + ');
+
+/* ================= modal ================= */
+function modal({ title, sub = '', body, ok = 'Confirm', tone = 't-ink', onOk, okDisabled }) {
+  const ov = $('#ov');
+  ov.innerHTML = `<form class="mdl" novalidate><div class="mdl-h"><div><h3>${title}</h3>${sub ? `<p>${sub}</p>` : ''}</div>
+    <button type="button" class="icon-btn" data-x aria-label="Close">${ic('x')}</button></div>
+    <div class="mdl-b">${body}</div>
+    <div class="mdl-f"><button type="button" class="btn" data-x>Cancel</button><button class="btn solid ${tone}" ${okDisabled?'disabled':''}>${ok}</button></div></form>`;
+  ov.classList.add('on');
+  const f = ov.querySelector('form');
+  const close = () => { document.removeEventListener('keydown', onKey); if (ov.querySelector('form') !== f) return; ov.classList.remove('on'); ov.innerHTML = ''; };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  f.querySelectorAll('[data-x]').forEach(b => b.onclick = close);
+  ov.onmousedown = e => { if (e.target === ov) close(); };
+  f.onsubmit = async e => {
+    e.preventDefault();
+    if (!f.checkValidity()) { f.reportValidity(); return; }
+    if (f.dataset.busy) return; f.dataset.busy = '1';   // stops double-clicks saving twice
+    const data = Object.fromEntries(new FormData(f));
+    try { if (await onOk(data, f) !== false) close(); } finally { delete f.dataset.busy; }
+  };
+  setTimeout(() => f.querySelector('.mdl-b input:not([type=hidden]):not([type=checkbox]),.mdl-b select')?.focus(), 30);
+  return f;
+}
+const confirmBox = (title, msg, ok, tone, fn) => modal({ title, body: `<p style="margin:0">${msg}</p>`, ok, tone, onOk: fn });
+
+/* ================= export ================= */
+function copyTSV(rows) {
+  const txt = rows.map(r => r.map(c => String(c ?? '').replace(/[\t\n]/g,' ')).join('\t')).join('\n');
+  navigator.clipboard.writeText(txt).then(() => toast(`Copied ${plural(rows.length - 1, 'row')}. Paste into Excel.`))
+    .catch(() => modal({ title: 'Copy data', sub: 'Select all and copy, then paste into Excel.', body: `<textarea style="height:260px">${esc(txt)}</textarea>`, ok: 'Done', onOk: () => {} }));
+}
+function download(name, text, type) {
+  try {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name;
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  } catch { toast('Download is not available here. Use Copy instead.', 1); }
+}
+const toCSV = rows => '﻿' + rows.map(r => r.map(c => { const s = String(c ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; }).join(',')).join('\r\n');
+
+/* ================= routing ================= */
+const TABS = {};
+let tab = 'dash', pendingFilter = null;
+function go(t) {
+  closeRange();
+  if (!TABS[t]) t = 'dash';
+  tab = t; if (location.hash.slice(1) !== t) history.replaceState(null, '', '#' + t);
+  $('#view').innerHTML = `<div id="tabRoot">${TABS[t].html()}</div>`;
+  TABS[t].init?.();
+  $('#endPad').style.height = '0px'; refresh(); window.scrollTo(0, 0);
+}
+document.addEventListener('click', e => {
+  const g = e.target.closest('[data-go]'); if (!g || g.closest('#ov')) return;
+  if (g.dataset.filter) pendingFilter = g.dataset.filter;
+  go(g.dataset.go);
+});
+window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (TABS[h] && h !== tab) go(h); });
+
+function shell() {
+  const name = company();
+  $('#coName').textContent = name; document.title = name + ' · Returns & replacement control';
+  $('#mark').textContent = name.split(/\s+/).filter(Boolean).slice(0,2).map(w => w[0]).join('').toUpperCase() || 'RC';
+  $('#opName').textContent = ME ? ME.name : 'Signed out';
+  const ng = NG(), good = [...S.good.values()];
+  const wh = ng.filter(r => r.status === 'WH'), sp = ng.filter(r => r.status === 'SUP');
+  const cnP = ng.filter(r => r.cnNo && r.cnStatus !== 'deducted');
+  const gl = good.filter(g => goodBal(g) > 0);
+  $('.ov').innerHTML = `${ic('grid')} <span>Overview</span>`;
+  $('.seg.t-ng').innerHTML = `<span class="no">1</span><span class="nm">Not Good<small class="kh">ទំនិញមិនល្អ</small></span>
+    <span class="ct"><b>${num(wh.length)}</b><small>${num(sum(wh, r => r.qty))} pcs to return</small></span>`;
+  $('.seg.t-sup').innerHTML = `<span class="no">2</span><span class="nm">Supplier<small class="kh">អ្នកផ្គត់ផ្គង់</small></span>
+    <span class="ct"><b>${num(sp.length)}</b><small>${cnP.length ? `${money(sum(cnP, r => r.cnAmount))} CN pending` : 'lines waiting'}</small></span>`;
+  $('.seg.t-good').innerHTML = `<span class="no">3</span><span class="nm">Good<small class="kh">ទំនិញល្អ</small></span>
+    <span class="ct"><b>${num(gl.length)}</b><small>${num(sum(gl, goodBal))} pcs to send</small></span>`;
+  document.querySelectorAll('#track [data-go]').forEach(b => { b.classList.toggle('on', b.dataset.go === tab); b.setAttribute('aria-current', b.dataset.go === tab ? 'page' : 'false'); });
+  $('#setBtn').classList.toggle('on', tab === 'settings');
+  $('#supList').innerHTML = supplierNames().map(n => `<option value="${esc(n)}">`).join('');
+}
+const GATES = [
+  ['[data-a=edit]', 'ng.edit'], ['[data-a=del]', 'ng.delete'],
+  ['[data-a=sel],[data-a=all],[data-a=print]', 'ng.return'],
+  ['[data-a=exc],[data-a=cn],[data-a=rej]', 'sup.settle'], ['[data-a=ded]', 'cn.deduct'], ['[data-a=disp]', 'disp.mark'],
+  ['#gAdd', 'good.receive'], ['[data-a=gdel]', 'ng.delete'], ['[data-a=send]', 'good.send'],
+  ['[data-a=undo],[data-a=unded],[data-a=undisp],[data-a=dundo]', 'undo'],
+  ['#ngCopy,#ngCsv,#spCsv,#cnCsv,#rjCsv,#gCsv,#dCsv', 'export'],
+  ['#bkDl', 'backup'], ['#myPin', 'pin.self'], ['#xlExp', 'export'], ['#xlImpLbl', 'adm.import'],
+  ['#spForm,[data-a=editsup],[data-a=delsup]', 'set.suppliers'],
+  ['#fCompany', 'set.company'], ['#fBranches', 'set.branches'], ['#fLimits', 'set.limits'],
+  ['#usersSec', 'adm.users'], ['#rolesSec', 'adm.roles'], ['#bkUpLbl', 'adm.restore'], ['#wipeSec', 'adm.wipe'],
+];
+function applyPerms() {
+  const nf = document.querySelector('#view .panel:has(#ngForm)'); if (nf) nf.hidden = !(can('ng.add') || can('ng.edit'));
+  const nfNew = $('#ngForm') && !$('#ngForm').id.value; if (nfNew && $('#ngSave')) $('#ngSave').disabled = !can('ng.add');
+  for (const [sel, p] of GATES) { const ok = can(p); document.querySelectorAll('#view ' + sel.split(',').join(',#view ')).forEach(el => { el.hidden = !ok; }); }
+  $('#setBtn').hidden = !ME;
+  const sb = $('#ngBulk'); if (sb && (!can('ng.return') || !ngSel.size)) sb.hidden = true;
+}
+document.addEventListener('click', e => {   // second line of defence if a hidden control is reached
+  for (const [sel, p] of GATES) { const el = e.target.closest(sel.split(',').map(x => '#view ' + x).join(',')); if (el && !can(p)) { e.preventDefault(); e.stopImmediatePropagation(); toast('Your privilege does not allow this.', 1); return; } }
+}, true);
+function layoutVars() {
+  const n = (document.querySelector('.hdr')?.offsetHeight || 0) - (document.querySelector('.hdr-top')?.offsetHeight || 0), st = document.querySelector('#view .subbar');
+  const r = document.documentElement.style; r.setProperty('--navH', n + 'px');
+  r.setProperty('--hdrTopH', (document.querySelector('.hdr-top')?.offsetHeight || 0) + 'px');
+  r.setProperty('--theadTop', (n + (st && st.offsetParent ? st.offsetHeight : 0)) + 'px');
+  /* a table wider than the screen scrolls sideways (its header row then scrolls with it) */
+  document.querySelectorAll('.tw.lst').forEach(w => { w.classList.remove('xs'); const t = w.querySelector('table'); if (t && t.scrollWidth > w.clientWidth + 1) w.classList.add('xs'); });
+  if (FS_READY) fsUpdate();
+}
+window.addEventListener('resize', layoutVars);
+let _lvF = 0; new MutationObserver(() => { cancelAnimationFrame(_lvF); _lvF = requestAnimationFrame(layoutVars); }).observe(document.getElementById('view'), { childList: true, subtree: true });
+
+/* ---- floating search: a round button pops up once the page's search box is scrolled away ---- */
+const FS_CFG = {
+  ng:   { q: '#ngQ', tone: 't-ng',   list: () => $('#ngList') },
+  sup:  { q: '#spQ', tone: 't-sup',  list: () => document.querySelector('#view .sp-sec:not([hidden])') },
+  good: { q: '#gQ',  tone: 't-good', list: () => $('#gList') },
+};
+const fsEl = document.createElement('div'); fsEl.id = 'fs'; fsEl.className = 'fs';
+fsEl.innerHTML = `<button class="fs-ret" type="button">${ic('truck', 18)}<span>Return to supplier</span><b class="fs-n">0</b></button>
+  <button class="fs-btn" type="button" aria-label="Search" title="Search">${ic('search', 22)}<span class="fs-dot"></span></button>
+  <div class="fs-box" role="search">${ic('search', 19)}<input type="text" enterkeyhint="search" aria-label="Search this list" autocomplete="off"><button class="fs-x" type="button" aria-label="Clear search" title="Clear search">${ic('x', 18)}</button></div>`;
+document.body.appendChild(fsEl);
+const fsIn = fsEl.querySelector('input');
+let fsOpen = false, fsTab = null, _fsF = 0;
+const fsOff = () => parseInt(getComputedStyle(document.documentElement).getPropertyValue('--theadTop')) || 0;
+function fsPage() { const c = FS_CFG[tab], q = c && document.querySelector('#view ' + c.q); return q && q.offsetParent ? { c, q } : null; }
+function fsUpdate() {
+  if (tab !== fsTab) { fsTab = tab; fsOpen = false; }
+  const p = fsPage();
+  if (!p) { fsOpen = false; fsEl.className = 'fs'; return; }
+  const away = p.q.getBoundingClientRect().bottom < fsOff();
+  if (fsOpen && !away) {              /* the page's own box is back in view: carry on typing there */
+    const typing = document.activeElement === fsIn; fsOpen = false;
+    if (typing) { p.q.focus(); const n = p.q.value.length; try { p.q.setSelectionRange(n, n); } catch (e) {} }
+  }
+  /* Not Good: lines are ticked but the "Return to supplier" bar is scrolled away -> the button pops up here too */
+  const bk = tab === 'ng' ? document.querySelector('#view #ngBulk') : null, n = bk && !bk.hidden ? ngSel.size : 0;
+  const ret = n > 0 && bk.getBoundingClientRect().bottom < fsOff();
+  if (ret) { const rb = document.getElementById('bRet'), r = fsEl.querySelector('.fs-ret');
+    r.querySelector('.fs-n').textContent = n; r.classList.toggle('off', !!rb?.disabled);
+    r.title = rb?.disabled ? 'Choose lines from one supplier only' : `Return ${plural(n, 'line')} to supplier`; }
+  fsEl.className = 'fs ' + p.c.tone + (away && !fsOpen ? ' show' : '') + (fsOpen ? ' open' : '') + (ret && !fsOpen ? ' ret' : '') + (p.q.value.trim() ? ' has' : '');
+}
+function fsSet(v) {
+  const p = fsPage(); if (!p) return;
+  const y0 = window.scrollY;
+  p.q.value = v; p.q.dispatchEvent(new Event('input', { bubbles: true }));
+  const el = p.c.list();   /* the first results show just under the bars; the page does not jump up to the search box */
+  if (el) scrollKeep(Math.min(y0, el.getBoundingClientRect().top + window.scrollY - fsOff()));
+  fsUpdate();
+}
+function fsClose() { if (!fsOpen) return; fsOpen = false; fsUpdate(); }
+fsEl.querySelector('.fs-btn').onclick = () => { const p = fsPage(); if (!p) return; fsOpen = true; fsIn.value = p.q.value; fsIn.placeholder = p.q.placeholder; fsUpdate(); fsIn.focus(); };
+fsEl.querySelector('.fs-ret').onclick = () => { const rb = document.getElementById('bRet'); if (!rb) return;
+  if (rb.disabled) return toast('Choose lines from one supplier only', 1); rb.click(); };
+fsEl.querySelector('.fs-x').onclick = () => { fsSet(''); fsOpen = false; fsUpdate(); };
+fsIn.addEventListener('input', () => fsSet(fsIn.value));
+fsIn.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); fsClose(); } });
+document.addEventListener('pointerdown', e => { if (fsOpen && !fsEl.contains(e.target)) fsClose(); }, true);
+window.addEventListener('scroll', () => { cancelAnimationFrame(_fsF); _fsF = requestAnimationFrame(fsUpdate); }, { passive: true });
+var FS_READY = true;
+function refresh() {
+  if (ME) { const u = S.users.get(ME.id); if (!u || u.status === 'inactive') { signOut('Your account was changed. Please sign in again.'); return; } ME = u; }
+  shell(); TABS[tab].refresh?.(); applyPerms(); layoutVars();
+}
+
+function fillSel(sel, opts, allLabel) {
+  if (!sel) return; const v = sel.value;
+  sel.innerHTML = `<option value="">${allLabel}</option>` + opts.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  sel.value = opts.includes(v) ? v : '';
+}
+const prod = r => `<div class="prod"><b>${esc(r.name)}</b>${r.barcode ? `<span class="sub">${esc(r.barcode)}</span>` : ''}</div>`;
+const reason = r => `<span class="badge plain ${r.reason === 'Damaged' ? 't-ink' : 't-ng'}">${esc(r.reason)}</span>`;
+const empty = (icon, title, text) => `<div class="empty">${ic(icon, 28)}<b>${title}</b>${text}</div>`;
+const brOpts = sel => myBR().map(b => `<option ${b === sel ? 'selected' : ''}>${esc(b)}</option>`).join('');
+
+/* ================= OVERVIEW ================= */
+TABS.dash = {
+  html: () => `
+  <div class="ph"><div><h1>Overview<span class="kh">ទិដ្ឋភាពរួម</span></h1>
+    <p>Where every line is now, from branch to supplier and back to the store.</p></div></div>
+  <section class="panel"><div class="p-h"><h2>Product flow<span class="kh">លំហូរទំនិញ</span></h2><span class="note">Select a box to open its list.</span></div>
+    <div class="flow" id="flow"></div></section>
+  <section class="panel"><div class="p-h"><h2>Status<span class="kh">ស្ថានភាព</span></h2><span class="note">Lines by status. Select one to see the lines.</span></div>
+    <div class="register" id="reg"></div></section>
+  <section class="panel"><div class="p-h"><h2>Needs attention<span class="kh">ត្រូវតាមដាន</span></h2><span class="note" id="alNote"></span>
+    <div class="act"><button class="btn sm ghost" data-go="settings">Change limits</button></div></div><div id="alerts"></div></section>
+  <section class="panel"><div class="p-h"><h2>By supplier<span class="kh">តាមអ្នកផ្គត់ផ្គង់</span></h2></div><div id="bySup"></div></section>`,
+  refresh() {
+    const ng = NG(), good = [...S.good.values()];
+    const wh = ng.filter(r => r.status === 'WH'), sp = ng.filter(r => r.status === 'SUP');
+    const cnP = ng.filter(r => r.cnNo && r.cnStatus !== 'deducted'), cnD = ng.filter(r => r.cnNo && r.cnStatus === 'deducted');
+    const rj = ng.filter(r => r.status === 'REJ' && !r.dispDate), dsp = ng.filter(r => r.status === 'REJ' && r.dispDate);
+    const node = (tone, goTo, title, big, small, filter = '') =>
+      `<button class="node ${tone}" data-go="${goTo}" ${filter ? `data-filter="${filter}"` : ''}><h3>${title}</h3><span class="big">${big}</span><small>${small}</small></button>`;
+    const J = `<div class="join">${ic('chev', 20)}</div>`;
+    $('#flow').innerHTML = `
+      <div class="fcol"><div class="lane">From branches</div>${myBR().map(b => node('br','ng', esc(b), num(sum(ng.filter(r => r.branch === b), r => r.qty)), 'Not Good pcs received')).join('')}</div>${J}
+      <div class="fcol"><div class="lane">1  Warehouse</div>${node('t-ng','ng','Not Good at warehouse', num(sum(wh, r => r.qty)), `${plural(wh.length,'line')}, ${money(sum(wh,val))}<br>waiting to return`, 'WH')}</div>${J}
+      <div class="fcol"><div class="lane">2  Supplier</div>${node('t-sup','sup','At supplier', num(sum(sp, r => r.qty)), `${plural(sp.length,'line')}, ${money(sum(sp,val))}<br>waiting for exchange or CN`)}</div>${J}
+      <div class="fcol"><div class="lane">3  Result</div>
+        ${node('t-good','good','Good at warehouse', num(sum(good, goodBal)), `${money(sum(good, g => goodBal(g) * (+g.cost||0)))} to send to stores`)}
+        ${node('t-cn','sup','Credit notes', money(sum(cnP, r => r.cnAmount)), `pending deduction<br>${money(sum(cnD, r => r.cnAmount))} already deducted`, 'CNP')}
+        ${node('t-rj','sup','Rejected by supplier', num(sum(rj, r => r.qty)), `pcs waiting for disposal<br>${money(sum(dsp, val))} disposal loss`, 'REJ')}</div>${J}
+      <div class="fcol"><div class="lane">To stores</div>${myBR().map(b => node('br','good', esc(b), num(sum(good, g => goodSent(g,b))), 'good pcs sent')).join('')}</div>`;
+    const counts = {}; ng.forEach(r => stKey(r).forEach(k => (counts[k] ??= []).push(r)));
+    $('#reg').innerHTML = STATUSES.map(([k, l, t, kh]) => { const a = counts[k] || [];
+      return `<button class="reg ${t}" data-go="ng" data-filter="${k}"><span class="lb">${l}</span><span class="big">${num(a.length)}</span><small>${num(sum(a, r => r.qty))} pcs</small><br><small class="kh">${kh}</small></button>`; }).join('');
+    const al = [];
+    const A = (tone, icon, text, goTo, filter) => al.push({ tone, icon, text, goTo, filter });
+    wh.filter(r => days(r.date) > lim('ageWH')).forEach(r => A('t-ng','alert',`<b>${esc(r.name)}</b> (${r.qty} pcs from ${esc(r.branch)}) has been in the warehouse ${days(r.date)} days. Return it to ${esc(r.supplier)}.`,'ng','WH'));
+    sp.filter(r => days(r.rtvDate) > lim('ageSup')).forEach(r => A('t-sup','truck',`<b>${esc(r.name)}</b> (${r.qty} pcs, ${esc(r.rtvNo)}) has been at ${esc(r.supplier)} ${days(r.rtvDate)} days with no exchange or CN.`,'sup'));
+    cnP.filter(r => days(r.cnDate) > lim('ageCN')).forEach(r => A('t-cn','receipt',`Credit note <b>${esc(r.cnNo)}</b> from ${esc(r.supplier)} (${money(r.cnAmount)}) is not deducted after ${days(r.cnDate)} days.`,'sup'));
+    rj.filter(r => days(r.settleDate) > lim('ageRej')).forEach(r => A('t-rj','trash',`<b>${esc(r.name)}</b> (${r.qty} pcs) was rejected by ${esc(r.supplier)} ${days(r.settleDate)} days ago and is not disposed yet.`,'sup'));
+    good.filter(g => goodBal(g) > 0 && days(g.date) > lim('ageGood')).forEach(g => A('t-bl','box',`<b>${esc(g.name)}</b>: ${goodBal(g)} good pcs have been in the warehouse ${days(g.date)} days. Send them to the store.`,'good'));
+    $('#alNote').textContent = al.length ? plural(al.length, 'item') : '';
+    $('#alerts').innerHTML = al.length ? `<ul class="alerts">${al.map(a => `<li class="${a.tone}"><span class="ic">${ic(a.icon)}</span><span class="tx">${a.text}</span>
+      <button class="btn sm" data-go="${a.goTo}" ${a.filter ? `data-filter="${a.filter}"` : ''}>Open</button></li>`).join('')}</ul>`
+      : empty('check','Nothing overdue', `Lines show here when they wait too long: ${lim('ageWH')} days in warehouse, ${lim('ageSup')} days at supplier, ${lim('ageCN')} days for a CN, ${lim('ageGood')} days for good stock, ${lim('ageRej')} days for rejected product.`);
+    $('#bySup').innerHTML = supSummary();
+  }
+};
+function supSummary() {
+  const rows = {}; const g = n => rows[n] ??= { wh:0, whV:0, sup:0, supV:0, cnP:0, cnD:0, bal:0, rj:0, loss:0 };
+  for (const r of NG()) {
+    const x = g(r.supplier || '(none)');
+    if (r.status === 'WH') { x.wh += +r.qty||0; x.whV += val(r); }
+    if (r.status === 'SUP') { x.sup += +r.qty||0; x.supV += val(r); }
+    if (r.cnNo) r.cnStatus === 'deducted' ? x.cnD += +r.cnAmount||0 : x.cnP += +r.cnAmount||0;
+    if (r.status === 'REJ') { x.rj += +r.qty||0; if (r.dispDate) x.loss += val(r); }
+  }
+  for (const r of S.good.values()) g(r.supplier || '(none)').bal += goodBal(r);
+  const names = Object.keys(rows).sort();
+  if (!names.length) return empty('box', 'No records yet', 'Start in step 1, Not Good, by receiving expired or damaged product from a branch.');
+  return `<div class="tw"><table><thead><tr><th>Supplier</th><th class="r">Not Good at WH</th><th class="r">Value</th><th class="r">At supplier</th><th class="r">Value</th><th class="r">CN pending</th><th class="r">CN deducted</th><th class="r">Good to send</th><th class="r">Rejected</th><th class="r">Disposal loss</th></tr></thead><tbody>
+    ${names.map(n => { const x = rows[n]; return `<tr><td><b>${esc(n)}</b></td><td class="r">${num(x.wh)}</td><td class="r">${money(x.whV)}</td><td class="r">${num(x.sup)}</td><td class="r">${money(x.supV)}</td><td class="r">${money(x.cnP)}</td><td class="r">${money(x.cnD)}</td><td class="r">${num(x.bal)}</td><td class="r">${num(x.rj)}</td><td class="r">${money(x.loss)}</td></tr>`; }).join('')}
+  </tbody></table></div>`;
+}
+
+/* ================= list pages (like the POS: fixed header, scroll inside, pages at the bottom) ================= */
+const PG = {};
+const PG_SIZES = [30, 50, 100];
+function paginate(key, rows, sig) {
+  const st = PG[key] ??= { p: 1, size: +lsGet('pgSize', 30) || 30, sig };
+  if (st.sig !== sig) { st.p = 1; st.sig = sig; }
+  const pages = Math.max(1, Math.ceil(rows.length / st.size)); if (st.p > pages) st.p = pages;
+  const start = (st.p - 1) * st.size, end = Math.min(start + st.size, rows.length);
+  return { rows: rows.slice(start, end), foot: `<div class="pager" data-pgkey="${key}">
+      <label class="pg-size">Rows per page <select data-pg="size">${PG_SIZES.map(n => `<option ${n === st.size ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+      <span class="pg-total">${rows.length ? `${num(start + 1)}–${num(end)} of ` : ''}Total <b>${num(rows.length)}</b> ${rows.length === 1 ? 'item' : 'items'}</span>
+      <span class="pg-nav"><button type="button" class="pg-btn" data-pg="prev" ${st.p <= 1 ? 'disabled' : ''} aria-label="Previous page">${ic('chev', 15).replace('<svg', '<svg style="transform:rotate(180deg)"')}</button>
+        <span class="pg-cur">${st.p}</span><span class="pg-of">/ ${pages}</span>
+        <button type="button" class="pg-btn" data-pg="next" ${st.p >= pages ? 'disabled' : ''} aria-label="Next page">${ic('chev', 15)}</button></span>
+      <span class="pg-go"><input type="number" min="1" max="${pages}" data-pg="page" placeholder="Page" aria-label="Go to page"><button type="button" class="btn sm" data-pg="go">Goto</button></span></div>` };
+}
+function pgGo(key, p) {
+  const st = PG[key]; if (!st) return; st.p = Math.max(1, p);
+  const y0 = window.scrollY;
+  TABS[tab].refresh?.(); applyPerms();
+  /* new page: bring the start of the list back into view, just under the bars */
+  const box = document.querySelector(`.pager[data-pgkey="${key}"]`)?.previousElementSibling; if (!box) return;
+  const off = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--theadTop')) || 0;
+  const y = box.getBoundingClientRect().top + window.scrollY - off - 8;
+  scrollKeep(Math.min(y0, y));
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('.pager [data-pg]'); if (!b || b.tagName === 'SELECT' || b.tagName === 'INPUT') return;
+  const key = b.closest('.pager').dataset.pgkey, st = PG[key]; if (!st) return;
+  if (b.dataset.pg === 'prev') pgGo(key, st.p - 1);
+  if (b.dataset.pg === 'next') pgGo(key, st.p + 1);
+  if (b.dataset.pg === 'go') { const v = +b.closest('.pager').querySelector('[data-pg=page]').value; if (v) pgGo(key, v); }
+});
+document.addEventListener('change', e => {
+  const sel = e.target.closest('.pager [data-pg=size]'); if (!sel) return;
+  const key = sel.closest('.pager').dataset.pgkey; lsSet('pgSize', sel.value);
+  for (const k in PG) PG[k].size = +sel.value;
+  pgGo(key, 1);
+});
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('.pager [data-pg=page]')) { e.preventDefault(); e.target.closest('.pager').querySelector('[data-pg=go]').click(); } });
+
+/* scroll to y even when the list just got shorter: a little space is added at the end so the page does not jump up */
+function scrollKeep(y) {
+  const sp = document.getElementById('endPad'); sp.style.height = '0px';
+  const need = Math.ceil(y + window.innerHeight - document.body.getBoundingClientRect().height);
+  if (need > 0) sp.style.height = need + 'px';
+  window.scrollTo({ top: Math.max(0, y), behavior: 'instant' });
+}
+/* that extra space shrinks again as soon as it is not needed */
+window.addEventListener('scroll', () => { const sp = document.getElementById('endPad'); if (!sp || !sp.offsetHeight) return;
+  const base = document.body.getBoundingClientRect().height - sp.offsetHeight, need = Math.ceil(window.scrollY + window.innerHeight - base);
+  sp.style.height = Math.max(0, Math.min(sp.offsetHeight, need)) + 'px'; }, { passive: true });
+
+/* ================= time filter (presets + calendar) ================= */
+let ngRange = { key: 'all' };
+const isoD = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const dmy = s => s ? s.split('-').reverse().join('-') : '';
+const addD = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const PRESETS = [
+  ['Date and week', [['today','Today'],['yesterday','Yesterday'],['thisweek','This week'],['lastweek','Last week'],['last7','Last 7 days']]],
+  ['Month and quarter', [['thismonth','This month'],['lastmonth','Last month'],['thisq','This quarter'],['lastq','Last quarter'],['last30','Last 30 days'],['last90','Last 90 days']]],
+  ['Year', [['h2','2nd half'],['h1','1st half'],['thisyear','This year'],['lastyear','Last year']]],
+];
+const PRESET_NAME = Object.fromEntries(PRESETS.flatMap(g => g[1]));
+function presetDates(k) {
+  const t = new Date(today() + 'T00:00'), y = t.getFullYear(), m = t.getMonth(), w = t.getDay(), q = Math.floor(m / 3);
+  const R = {
+    today: [t, t], yesterday: [addD(t, -1), addD(t, -1)], thisweek: [addD(t, -w), addD(t, 6 - w)], lastweek: [addD(t, -w - 7), addD(t, -w - 1)], last7: [addD(t, -6), t],
+    thismonth: [new Date(y, m, 1), new Date(y, m + 1, 0)], lastmonth: [new Date(y, m - 1, 1), new Date(y, m, 0)],
+    thisq: [new Date(y, q * 3, 1), new Date(y, q * 3 + 3, 0)], lastq: [new Date(y, q * 3 - 3, 1), new Date(y, q * 3, 0)],
+    last30: [addD(t, -29), t], last90: [addD(t, -89), t],
+    h2: [new Date(y, 6, 1), new Date(y, 11, 31)], h1: [new Date(y, 0, 1), new Date(y, 5, 30)],
+    thisyear: [new Date(y, 0, 1), new Date(y, 11, 31)], lastyear: [new Date(y - 1, 0, 1), new Date(y - 1, 11, 31)] }[k];
+  return R ? R.map(isoD) : [null, null];
+}
+const rangeOf = r => r.key === 'all' ? [null, null] : r.key === 'custom' ? [r.from, r.to] : presetDates(r.key);
+const rangeLabel = r => { const [f, t] = rangeOf(r); return !f ? 'all dates' : f === t ? dmy(f) : `${dmy(f)} to ${dmy(t)}`; };
+function paintRangeBtn(btn, clr, r) {
+  if (!btn) return; const [f, t] = rangeOf(r);
+  btn.innerHTML = `${ic('clock', 15)}<span class="tb-tx"><b>${r.key === 'all' ? 'All time' : r.key === 'custom' ? 'Custom range' : PRESET_NAME[r.key]}</b>${f ? `<small>${f === t ? dmy(f) : `${dmy(f)} – ${dmy(t)}`}</small>` : ''}</span>${ic('chev', 14).replace('<svg', '<svg style="transform:rotate(90deg);margin-left:auto"')}`;
+  btn.classList.toggle('on', r.key !== 'all'); if (clr) clr.hidden = r.key === 'all';
+}
+let rpEl = null;
+function closeRange() { if (rpEl) { rpEl.remove(); rpEl = null; document.removeEventListener('mousedown', rpOutside, true); document.removeEventListener('keydown', rpKey, true); } }
+const rpOutside = e => { if (rpEl && !rpEl.contains(e.target) && !e.target.closest('.tbtn')) closeRange(); };
+const rpKey = e => { if (e.key === 'Escape') closeRange(); };
+function openRange(btn, cur, onPick) {
+  if (rpEl) { closeRange(); return; }
+  const [cf, ct] = rangeOf(cur);
+  const st = { view: 'presets', a: cf, b: ct, hover: null, base: (() => { const d = new Date((cf || today()) + 'T00:00'); return new Date(d.getFullYear(), d.getMonth(), 1); })() };
+  rpEl = document.createElement('div'); rpEl.className = 'rp'; document.body.appendChild(rpEl);
+  const place = () => { const b = btn.getBoundingClientRect(), w = rpEl.offsetWidth;
+    rpEl.style.top = (b.bottom + window.scrollY + 6) + 'px'; rpEl.style.left = Math.max(10, Math.min(b.left + window.scrollX, window.scrollX + document.documentElement.clientWidth - w - 10)) + 'px'; };
+  const month = base => {
+    const y = base.getFullYear(), m = base.getMonth(), first = new Date(y, m, 1), start = addD(first, -first.getDay()), td = today();
+    const lo = st.a && (st.b || st.hover) ? [st.a, st.b || st.hover].sort()[0] : st.a, hi = st.a && (st.b || st.hover) ? [st.a, st.b || st.hover].sort()[1] : st.a;
+    let cells = '';
+    for (let i = 0; i < 42; i++) { const d = addD(start, i), k = isoD(d), out = d.getMonth() !== m;
+      const cls = ['d', out && 'out', k === td && 'td', lo && k >= lo && k <= hi && 'in', k === lo && 'lo', k === hi && 'hi'].filter(Boolean).join(' ');
+      cells += `<button type="button" class="${cls}" data-d="${k}">${d.getDate()}</button>`; }
+    return `<div class="cal"><div class="cal-h">${base.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}</div>
+      <div class="cal-g">${['Su','Mo','Tu','We','Th','Fr','Sa'].map(x => `<span>${x}</span>`).join('')}${cells}</div></div>`;
+  };
+  const render = () => {
+    if (st.view === 'presets') {
+      rpEl.innerHTML = `<div class="rp-pre">
+        <div class="rp-top"><button type="button" class="rp-all ${cur.key === 'all' ? 'on' : ''}" data-k="all">All time</button>
+          <button type="button" class="rp-cust ${cur.key === 'custom' ? 'on' : ''}" data-view="cal">${ic('clock', 14)} Custom range…</button></div>
+        <div class="rp-cols">${PRESETS.map(([g, items]) => `<div><h4>${g}</h4>${items.map(([k, l]) => `<button type="button" class="${cur.key === k ? 'on' : ''}" data-k="${k}">${l}</button>`).join('')}</div>`).join('')}</div></div>`;
+    } else {
+      const nb = new Date(st.base.getFullYear(), st.base.getMonth() + 1, 1);
+      const lo = st.a && st.b ? [st.a, st.b].sort() : [st.a, st.a];
+      rpEl.innerHTML = `<div class="rp-cal">
+        <div class="rp-nav"><button type="button" class="icon-btn" data-nav="-1" aria-label="Previous month">${ic('chev', 16).replace('<svg', '<svg style="transform:rotate(180deg)"')}</button>
+          <button type="button" class="btn sm ghost" data-view="presets">Back to presets</button>
+          <button type="button" class="icon-btn" data-nav="1" aria-label="Next month">${ic('chev', 16)}</button></div>
+        <div class="cals">${month(st.base)}${month(nb)}</div>
+        <div class="rp-foot"><span>${st.a ? `${dmy(lo[0])} – ${dmy(lo[1])}` : 'Choose the first day'}</span>
+          <button type="button" class="btn sm" data-x="1">Cancel</button><button type="button" class="btn sm solid t-ink" data-apply="1" ${st.a ? '' : 'disabled'}>Apply</button></div></div>`;
+    }
+    place();
+  };
+  rpEl.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.k) { onPick(b.dataset.k === 'all' ? { key: 'all' } : { key: b.dataset.k }); return closeRange(); }
+    if (b.dataset.view) { st.view = b.dataset.view; return render(); }
+    if (b.dataset.nav) { st.base = new Date(st.base.getFullYear(), st.base.getMonth() + +b.dataset.nav, 1); return render(); }
+    if (b.dataset.d) { const k = b.dataset.d; if (!st.a || st.b) { st.a = k; st.b = null; } else { st.b = k; if (st.b < st.a) [st.a, st.b] = [st.b, st.a]; } st.hover = null; return render(); }
+    if (b.dataset.x) return closeRange();
+    if (b.dataset.apply) { const [f, t] = [st.a, st.b || st.a].sort(); onPick({ key: 'custom', from: f, to: t }); closeRange(); }
+  });
+  rpEl.addEventListener('mouseover', e => { const b = e.target.closest('[data-d]'); if (b && st.a && !st.b && st.hover !== b.dataset.d) { st.hover = b.dataset.d; render(); } });
+  render();
+  setTimeout(() => { document.addEventListener('mousedown', rpOutside, true); document.addEventListener('keydown', rpKey, true); });
+}
+
+/* ================= 1  NOT GOOD ================= */
+const ngSel = new Set();
+TABS.ng = {
+  html: () => `
+  <div class="ph"><div><h1>Not Good stock<span class="kh">ទំនិញមិនល្អ</span></h1>
+    <p>Expired and damaged product from the branches, waiting to be returned.</p></div></div>
+  <section class="panel edge t-ng"><div class="p-h"><h2 id="ngFt">Receive from branch<span class="kh">ទទួលពីសាខា</span></h2><span class="note">Scan a barcode and press Enter to fill the product.</span></div>
+    <form id="ngForm" class="p-b fg" autocomplete="off">
+      <input type="hidden" name="id">
+      <label class="f">Date<input type="date" name="date" required></label>
+      <label class="f">Branch<select name="branch">${brOpts()}</select></label>
+      <label class="f s2">Barcode<input name="barcode" id="ngBc" inputmode="numeric"></label>
+      <label class="f s2">Product name<input name="name" required></label>
+      <label class="f s2">Supplier<input name="supplier" list="supList" required></label>
+      <label class="f">Reason<select name="reason"><option>Expired</option><option>Damaged</option></select></label>
+      <label class="f">Expiry date<input type="date" name="expiry"></label>
+      <label class="f">Quantity<input type="number" name="qty" min="1" step="1" required></label>
+      <label class="f">Unit cost ($)<input type="number" name="cost" min="0" step="0.01"></label>
+      <label class="f s2">Note<input name="note"></label>
+      <label class="f s2">Received by<input name="by"></label>
+      <div class="s2" style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn ghost" id="ngCancel" hidden>Cancel edit</button><button class="btn solid t-ink" id="ngSave">Save line</button></div>
+    </form></section>
+  <section class="panel tone t-ng"><div class="p-h"><h2>Lines</h2><span class="note" id="ngCount"></span>
+      <div class="act"><button class="btn sm" id="ngCopy">${ic('copy',14)} Copy for Excel</button><button class="btn sm" id="ngCsv">${ic('dl',14)} Export CSV</button></div></div>
+    <div class="tools"><div class="search">${ic('search')}<input type="search" id="ngQ" placeholder="Search product, barcode, RTV or CN number"></div>
+      <div class="tbtn-w"><button type="button" class="tbtn" id="ngTime"></button><button type="button" class="tclr" id="ngTimeClr" title="Show all dates" aria-label="Clear time filter" hidden>${ic('x',14)}</button></div>
+      <select id="ngBr"></select><select id="ngSt"></select><select id="ngSupF"></select></div>
+    <div class="bulk" id="ngBulk" hidden></div><div id="ngList"></div></section>`,
+  init() {
+    const f = $('#ngForm');
+    const reset = () => { f.reset(); f.date.value = today(); f.id.value = ''; f.by.value = operator(); $('#ngSave').textContent = 'Save line'; $('#ngCancel').hidden = true; };
+    reset(); $('#ngCancel').onclick = reset;
+    $('#ngBc').addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return; e.preventDefault();
+      const p = lookup(f.barcode.value.trim());
+      if (p) { f.name.value = p.name||''; f.supplier.value = p.supplier||''; f.cost.value = p.cost||''; f.qty.focus(); toast('Found: ' + esc(p.name)); } else f.name.focus();
+    });
+    f.onsubmit = e => {
+      e.preventDefault(); if (guard()) return;
+      const d = Object.fromEntries(new FormData(f)); const old = d.id && S.ng.get(d.id);
+      if (old ? !can('ng.edit') : !can('ng.add')) return toast(old ? 'Your privilege does not allow editing lines.' : 'Your privilege does not allow adding lines.', 1);
+      const rec = old ? clone(old) : { id: uid(), status: 'WH', createdAt: Date.now() };
+      Object.assign(rec, { date: d.date, branch: d.branch, barcode: d.barcode.trim(), name: d.name.trim(), supplier: d.supplier.trim(),
+        reason: d.reason, expiry: d.expiry, qty: +d.qty, cost: +d.cost || 0, note: d.note.trim(), by: d.by.trim() });
+      if (rec.by && !operator()) lsSet('ngBy', rec.by);
+      put('ng', rec); toast(old ? 'Line updated' : `Saved ${rec.qty} × ${esc(rec.name)} from ${esc(rec.branch)}`);
+      const keep = { date: d.date, branch: d.branch }; reset(); f.date.value = keep.date; f.branch.value = keep.branch; f.barcode.focus();
+    };
+    const st = $('#ngSt'); st.innerHTML = `<option value="">All statuses</option>` + STATUSES.map(s => `<option value="${s[0]}">${s[1]}</option>`).join('');
+    if (pendingFilter) { st.value = pendingFilter; pendingFilter = null; }
+    ['ngQ','ngBr','ngSt','ngSupF'].forEach(id => $('#'+id).addEventListener('input', () => this.refresh()));
+    $('#ngTime').onclick = e => openRange(e.currentTarget, ngRange, v => { ngRange = v; this.refresh(); });
+    $('#ngTimeClr').onclick = () => { ngRange = { key: 'all' }; this.refresh(); };
+    const rowsOut = () => [['Date','Branch','Barcode','Product','Supplier','Reason','Expiry','Qty','Unit cost','Value','Status','RTV no','Return date','CN no','CN amount','Invoice deducted','Reject reason','Disposal date','Disposal no','Note','Received by'],
+      ...this.rows().map(r => [r.date,r.branch,r.barcode,r.name,r.supplier,r.reason,r.expiry,r.qty,r.cost,val(r),stText(r),r.rtvNo,r.rtvDate,r.cnNo,r.cnAmount,r.invNo,r.rejReason,r.dispDate,r.dispNo,r.note,r.by])];
+    $('#ngCopy').onclick = () => copyTSV(rowsOut());
+    $('#ngCsv').onclick = () => download(`not-good-lines-${today()}.csv`, toCSV(rowsOut()), 'text/csv');
+    $('#ngList').addEventListener('click', e => {
+      const b = e.target.closest('[data-a]'); if (!b) return;
+      const r = S.ng.get(b.dataset.id); if (!r) return;
+      const a = b.dataset.a;
+      if (a === 'sel') { b.checked ? ngSel.add(r.id) : ngSel.delete(r.id); this.bulk(); return; }
+      if (a === 'edit') {
+        for (const k of ['id','date','branch','barcode','name','supplier','reason','expiry','qty','cost','note','by']) if (f[k]) f[k].value = r[k] ?? '';
+        $('#ngSave').textContent = 'Update line'; $('#ngCancel').hidden = false; f.scrollIntoView({ behavior: 'smooth', block: 'center' }); f.name.focus();
+      }
+      if (a === 'del') { if (guard()) return; if (!can('ng.delete')) return toast('Only users with Delete lines can delete.', 1); confirmBox('Delete this line?', `${esc(r.name)}, ${r.qty} pcs from ${esc(r.branch)}. This cannot be undone.`, 'Delete line', 't-ng', () => { ngSel.delete(r.id); remove('ng', r.id); toast('Line deleted'); }); }
+      if (a === 'undo') undoNG(r);
+    });
+    $('#ngList').addEventListener('change', e => {
+      if (e.target.dataset.a === 'all') { this.rows().filter(r => r.status === 'WH').forEach(r => e.target.checked ? ngSel.add(r.id) : ngSel.delete(r.id)); this.refresh(); }
+    });
+  },
+  rows() {
+    const q = $('#ngQ').value.trim().toLowerCase(), br = $('#ngBr').value, st = $('#ngSt').value, sp = $('#ngSupF').value;
+    const [rf, rt] = rangeOf(ngRange);
+    return NG().filter(r => (!rf || ((r.date || '') >= rf && (r.date || '') <= rt)) && (!br || r.branch === br) && (!st || stKey(r).includes(st)) && (!sp || r.supplier === sp) &&
+      (!q || [r.name,r.barcode,r.rtvNo,r.cnNo,r.invNo,r.note].join(' ').toLowerCase().includes(q)))
+      .sort((a,b) => (b.date||'').localeCompare(a.date||'') || (b.createdAt||0) - (a.createdAt||0));
+  },
+  refresh() {
+    fillSel($('#ngBr'), [...new Set([...myBR(), ...NG().map(r => r.branch)])].filter(Boolean), 'All branches');
+    fillSel($('#ngSupF'), supplierNames(), 'All suppliers');
+    const cnt = {}; for (const r of NG()) stKey(r).forEach(k => cnt[k] = (cnt[k]||0) + 1);
+    [...$('#ngSt').options].forEach(o => { if (o.value) o.textContent = `${SDEF[o.value][1]} (${cnt[o.value]||0})`; else o.textContent = `All statuses (${NG().length})`; });
+    for (const id of ngSel) if (S.ng.get(id)?.status !== 'WH') ngSel.delete(id);
+    const rows = this.rows(), whRows = rows.filter(r => r.status === 'WH');
+    const allOn = whRows.length && whRows.every(r => ngSel.has(r.id));
+    $('#ngCount').textContent = plural(rows.length, 'line') + (ngRange.key !== 'all' ? `, received ${rangeLabel(ngRange)}` : '');
+    paintRangeBtn($('#ngTime'), $('#ngTimeClr'), ngRange);
+    const P_ng = paginate('ng', rows, [$('#ngQ').value, $('#ngBr').value, $('#ngSt').value, $('#ngSupF').value, JSON.stringify(ngRange)].join('|'));
+    $('#ngList').innerHTML = !rows.length ? empty('search', S.ng.size ? 'No lines match' : 'No Not Good lines yet', S.ng.size ? 'Change the search or filters above.' : 'Use the form above to receive the first line from a branch.') :
+    `<div class="tw lst"><table><thead><tr><th style="width:36px"><input type="checkbox" data-a="all" ${allOn?'checked':''} ${whRows.length?'':'disabled'} aria-label="Select all lines at warehouse"></th>
+      <th>Date</th><th>Branch</th><th>Product</th><th>Supplier</th><th>Reason</th><th>Expiry</th><th class="r">Qty</th><th class="r">Value</th><th>Status</th><th>Reference</th><th></th></tr></thead>
+      <tbody>${P_ng.rows.map(r => `<tr>
+        <td>${r.status === 'WH' ? `<input type="checkbox" data-a="sel" data-id="${r.id}" ${ngSel.has(r.id)?'checked':''} aria-label="Select line">` : ''}</td>
+        <td class="nowrap">${fmtD(r.date)}</td><td class="nowrap"><b>${esc(r.branch)}</b></td><td>${prod(r)}</td><td>${esc(r.supplier)}</td><td>${reason(r)}</td>
+        <td class="nowrap">${fmtD(r.expiry)}</td><td class="r"><b>${num(r.qty)}</b></td><td class="r">${money(val(r))}</td><td>${pill(r)}</td>
+        <td class="sub nowrap">${esc(r.rtvNo||'')}${r.cnNo ? `<br>${esc(r.cnNo)}` : ''}</td>
+        <td class="nowrap r">${r.status === 'WH'
+          ? `<button class="btn sm ghost" data-a="edit" data-id="${r.id}" title="Edit">${ic('edit',14)}</button><button class="btn sm ghost" data-a="del" data-id="${r.id}" title="Delete">${ic('trash',14)}</button>`
+          : `<button class="btn sm ghost" data-a="undo" data-id="${r.id}" title="Undo the last step">${ic('undo',14)} Undo</button>`}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td colspan="7">${plural(rows.length,'line')}</td><td class="r">${num(sum(rows, r => r.qty))}</td><td class="r">${money(sum(rows, val))}</td><td colspan="3"></td></tr></tfoot></table></div>${P_ng.foot}`;
+    this.bulk();
+  },
+  bulk() {
+    const sel = [...ngSel].map(id => S.ng.get(id)).filter(Boolean), el = $('#ngBulk');
+    el.hidden = !sel.length; if (FS_READY) requestAnimationFrame(fsUpdate); if (!sel.length) return;
+    const sups = [...new Set(sel.map(r => r.supplier))];
+    el.innerHTML = `<b>${plural(sel.length,'line')} selected</b><span>${num(sum(sel, r => r.qty))} pcs, ${money(sum(sel, val))}</span>
+      ${sups.length > 1 ? `<span class="warn">Choose lines from one supplier only (${sups.length} selected)</span>` : `<span>Supplier: <b>${esc(sups[0])}</b></span>`}
+      <span style="flex:1"></span><button class="btn sm ghost" id="bClr">Clear</button>
+      <button class="btn sm solid t-sup" id="bRet" ${sups.length > 1 ? 'disabled' : ''}>${ic('truck',14)} Return to supplier</button>`;
+    $('#bClr').onclick = () => { ngSel.clear(); this.refresh(); };
+    $('#bRet').onclick = () => returnToSupplier(sel);
+  }
+};
+function nextTransfer() {
+  const p = 'TO-' + today().slice(2).replace(/-/g,'') + '-';
+  const used = [...S.good.values()].flatMap(g => (g.dispatches||[]).map(d => d.doc)).filter(n => n && n.startsWith(p)).map(n => +n.slice(p.length) || 0);
+  return p + String((used.length ? Math.max(...used) : 0) + 1).padStart(2,'0');
+}
+function nextRtv() {
+  const p = 'RTV-' + today().slice(2).replace(/-/g,'') + '-';
+  const used = [...S.ng.values()].map(r => r.rtvNo).filter(n => n && n.startsWith(p)).map(n => +n.slice(p.length) || 0);
+  return p + String((used.length ? Math.max(...used) : 0) + 1).padStart(2,'0');
+}
+function returnToSupplier(sel) {
+  if (guard()) return;
+  modal({ title: 'Return to supplier', tone: 't-sup', ok: 'Confirm return',
+    sub: `${plural(sel.length,'line')}, ${num(sum(sel, r => r.qty))} pcs, ${money(sum(sel, val))} to <b>${esc(sel[0].supplier)}</b>`,
+    body: `<div class="fg"><label class="f">Return date<input type="date" name="d" value="${today()}" required></label>
+      <label class="f">Return number (RTV)<input name="no" value="${nextRtv()}" required></label>
+      <label class="f s2">Note<input name="note" placeholder="Driver, supplier staff, vehicle"></label>
+      <label class="f s2" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="print"> Print the RTV document after saving</label></div>`,
+    onOk: async d => {
+      const no = d.no.trim();
+      for (const r of sel) await put('ng', { ...clone(r), status: 'SUP', rtvNo: no, rtvDate: d.d, rtvNote: d.note.trim(), rtvBy: operator() });
+      ngSel.clear(); refresh(); toast(`${esc(no)} saved. ${plural(sel.length,'line')} moved to Supplier.`);
+      if (d.print) setTimeout(() => printRTV(no), 200);
+    } });
+}
+function undoNG(r) {
+  if (guard()) return;
+  if (r.status === 'SUP') return confirmBox('Undo the return?', `<b>${esc(r.name)}</b> goes back to At Warehouse and is removed from ${esc(r.rtvNo)}.`, 'Undo return', 't-ink',
+    () => { const n = clone(r); n.status = 'WH'; ['rtvNo','rtvDate','rtvNote','rtvBy'].forEach(k => delete n[k]); put('ng', n); toast('Return undone'); });
+  const g = r.goodId && S.good.get(r.goodId);
+  const lose = [];
+  if (g) lose.push(`the good stock from this exchange (${num(g.qty)} pcs)`);
+  (g?.dispatches || []).forEach(d => lose.push(`transfer ${esc(d.doc || '')} to ${esc(d.branch)}: ${num(d.qty)} pcs on ${fmtD(d.date)}`));
+  if (r.cnNo) lose.push(`credit note ${esc(r.cnNo)}${r.cnStatus === 'deducted' ? ` and its deduction on ${esc(r.invNo || '')}` : ''}`);
+  if (r.status === 'REJ') lose.push(r.dispDate ? `the rejection and disposal record ${esc(r.dispNo || '')}` : 'the rejection');
+  const sent = (g?.dispatches || []).length > 0;
+  confirmBox('Undo the settlement?', `<b>${esc(r.name)}</b> goes back to <b>At Supplier</b>.` +
+    (lose.length ? `<br><br>This also removes:<ul style="margin:6px 0 0;padding-left:18px">${lose.map(x => `<li>${x}</li>`).join('')}</ul>` : '') +
+    (sent ? `<div class="info t-ng" style="margin-top:12px">The product was already sent to a store. Make sure the store stock is corrected too.</div>` : ''),
+    'Undo settlement', sent ? 't-ng' : 't-ink', async () => {
+      const n = clone(r); n.status = 'SUP';
+      ['settleDate','exQty','goodId','cnNo','cnDate','cnAmount','cnStatus','invNo','invDate','settleNote','rejReason','dispDate','dispNo'].forEach(k => delete n[k]);
+      if (g) await remove('good', g.id);
+      await put('ng', n); toast(`${esc(r.name)} is back at supplier`);
+    });
+}
+
+/* ================= 2  SUPPLIER ================= */
+let supTab = 'wait';
+const TABIC = { wait: 'truck', cn: 'receipt', rej: 'x', list: 'user' };
+TABS.sup = {
+  html: () => `
+  <div class="ph"><div><h1>Supplier<span class="kh">អ្នកផ្គត់ផ្គង់</span></h1>
+    <p>Returned lines waiting for an exchange, a credit note or a rejection.</p></div>
+    <div class="act"><select id="spF" style="width:200px"></select><div class="search" style="min-width:260px">${ic('search')}<input type="search" id="spQ" placeholder="Search product, RTV, CN or invoice"></div></div></div>
+  <div id="supTabsAnchor"></div><div class="subbar"><div class="subtabs" id="supTabs" role="tablist"></div></div>
+  <section class="panel edge t-sup sp-sec" data-st="wait"><div class="p-h"><h2>Waiting for supplier<span class="kh">រង់ចាំដូរ ឬកាត់ប្រាក់</span></h2><span class="note" id="spCount"></span><div class="act"><button class="btn sm" id="spCsv">${ic('dl',14)} Export CSV</button></div></div><div id="spWait"></div></section>
+  <section class="panel edge t-cn sp-sec" data-st="cn"><div class="p-h"><h2>Credit notes<span class="kh">ការកាត់ប្រាក់ពីវិក្កយបត្រ</span></h2>
+    <div class="act"><select id="cnF" style="width:auto"><option value="p">Pending deduction</option><option value="d">Deducted</option><option value="">All credit notes</option></select>
+      <button class="btn sm" id="cnCsv">${ic('dl',14)} Export CSV</button></div></div><div id="spCN"></div></section>
+  <section class="panel edge t-rj sp-sec" data-st="rej"><div class="p-h"><h2>Rejected by supplier → disposal<span class="kh">បដិសេធ និងបំផ្លាញ</span></h2><span class="note">Keep rejected product apart. Do not send it to a store.</span>
+    <div class="act"><select id="rjF" style="width:auto"><option value="w">Waiting for disposal</option><option value="d">Disposed</option><option value="">All rejected</option></select><button class="btn sm" id="rjCsv">${ic('dl',14)} Export CSV</button></div></div><div id="spRej"></div></section>
+  <section class="panel tone t-ink sp-sec" data-st="list"><div class="p-h"><h2>Supplier list<span class="kh">បញ្ជីអ្នកផ្គត់ផ្គង់</span></h2><span class="note">Contacts print on the RTV document.</span></div>
+    <form id="spForm" class="p-b fg" autocomplete="off" style="border-bottom:1px solid var(--rule)">
+      <label class="f s2">Supplier name<input name="name" required></label><label class="f">Contact person<input name="contact"></label><label class="f">Phone<input name="phone"></label>
+      <label class="f">Return terms<select name="terms"><option>Exchange</option><option>Credit note</option><option>Exchange or credit note</option></select></label>
+      <div style="display:flex;justify-content:flex-end"><button class="btn solid t-ink">Save supplier</button></div></form>
+    <div id="spMaster"></div></section>`,
+  init() {
+    $('#supTabs').onclick = e => { const b = e.target.closest('[data-stab]'); if (!b || b.dataset.stab === supTab) return;
+      const navH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--navH')) || 0, y0 = window.scrollY, barTop = $('#supTabsAnchor').getBoundingClientRect().top + y0 - navH - 10;
+      supTab = b.dataset.stab; this.refresh(); applyPerms();
+      scrollKeep(Math.max(0, Math.min(y0, barTop))); };  // the bar stays in the same place; the new list starts under it
+    ['spF','spQ','cnF','rjF'].forEach(id => $('#'+id).addEventListener('input', () => this.refresh()));
+    $('#spForm').onsubmit = e => {
+      e.preventDefault(); if (guard()) return;
+      const d = Object.fromEntries(new FormData(e.target)); d.name = d.name.trim();
+      const ex = [...S.suppliers.values()].find(s => s.name.toLowerCase() === d.name.toLowerCase());
+      put('suppliers', { ...(ex ? clone(ex) : { id: uid(), createdAt: Date.now() }), ...d }); e.target.reset(); toast(`Supplier ${esc(d.name)} saved`);
+    };
+    const fileDate = () => today();
+    $('#spCsv').onclick = () => download(`waiting-for-supplier-${fileDate()}.csv`, toCSV([['RTV no','Return date','Days at supplier','Supplier','Branch','Barcode','Product','Reason','Expiry','Qty','Unit cost','Value','Note'],
+      ...this.waitRows().map(r => [r.rtvNo,r.rtvDate,days(r.rtvDate),r.supplier,r.branch,r.barcode,r.name,r.reason,r.expiry,r.qty,r.cost,val(r),r.rtvNote])]), 'text/csv');
+    $('#rjCsv').onclick = () => download(`rejected-disposal-${fileDate()}.csv`, toCSV([['Supplier','RTV no','Branch','Barcode','Product','Rejected on','Reject reason','Qty','Unit cost','Loss','Status','Disposal date','Disposal no / approved by'],
+      ...this.rjRows().map(r => [r.supplier,r.rtvNo,r.branch,r.barcode,r.name,r.settleDate,r.rejReason,r.qty,r.cost,val(r),r.dispDate ? 'Disposed' : 'Rejected',r.dispDate,r.dispNo])]), 'text/csv');
+    $('#cnCsv').onclick = () => download(`credit-notes-${fileDate()}.csv`, toCSV([['Supplier','CN no','CN date','Amount','Product','Qty','RTV no','Status','Invoice no','Deducted date'],
+      ...this.cnRows().map(r => [r.supplier,r.cnNo,r.cnDate,r.cnAmount,r.name,r.qty,r.rtvNo,r.cnStatus === 'deducted' ? 'Deducted' : 'Pending deduction',r.invNo,r.invDate])]), 'text/csv');
+    $('#tabRoot').addEventListener('click', e => {
+      const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a;
+      if (a === 'print') return printRTV(b.dataset.rtv);
+      if (a === 'delsup') { if (guard()) return; const s = S.suppliers.get(b.dataset.id); return confirmBox('Remove this supplier?', `${esc(s.name)} is removed from the list. Its lines are kept.`, 'Remove supplier', 't-ng', () => remove('suppliers', s.id)); }
+      if (a === 'editsup') { const s = S.suppliers.get(b.dataset.id), f = $('#spForm'); ['name','contact','phone','terms'].forEach(k => f[k].value = s[k]||''); f.name.focus(); return; }
+      const r = S.ng.get(b.dataset.id); if (!r || guard()) return;
+      if (a === 'exc') settleExchange(r);
+      if (a === 'cn') settleCN(r);
+      if (a === 'rej') settleReject(r);
+      if (a === 'disp') markDisposed(r);
+      if (a === 'undisp') confirmBox('Undo the disposal?', `<b>${esc(r.name)}</b> goes back to Rejected, waiting for disposal.`, 'Undo disposal', 't-ink', () => { const n = clone(r); delete n.dispDate; delete n.dispNo; put('ng', n); toast('Disposal undone'); });
+      if (a === 'ded') markDeducted(r);
+      if (a === 'unded') confirmBox('Undo the deduction?', `Credit note ${esc(r.cnNo)} goes back to Pending deduction.`, 'Undo deduction', 't-ink', () => { const n = clone(r); n.cnStatus = 'pending'; delete n.invNo; delete n.invDate; put('ng', n); });
+      if (a === 'undo') undoNG(r);
+    });
+  },
+  waitRows() { return NG().filter(r => r.status === 'SUP' && this.match(r)).sort((a,b) => (a.rtvDate||'').localeCompare(b.rtvDate||'') || (a.rtvNo||'').localeCompare(b.rtvNo||'')); },
+  rjRows() { const rf = $('#rjF').value;
+    return NG().filter(r => r.status === 'REJ' && this.match(r) && (!rf || (rf === 'd') === !!r.dispDate)).sort((a,b) => (b.settleDate||'').localeCompare(a.settleDate||'')); },
+  match(r) { const sp = $('#spF').value, q = $('#spQ').value.trim().toLowerCase();
+    return (!sp || r.supplier === sp) && (!q || [r.name,r.barcode,r.rtvNo,r.cnNo,r.invNo].join(' ').toLowerCase().includes(q)); },
+  cnRows() { const f = $('#cnF').value;
+    return NG().filter(r => r.cnNo && this.match(r) && (!f || (f === 'd') === (r.cnStatus === 'deducted'))).sort((a,b) => (b.cnDate||'').localeCompare(a.cnDate||'')); },
+  refresh() {
+    fillSel($('#spF'), supplierNames(), 'All suppliers');
+    { const all = NG().filter(r => this.match(r));
+      const T = [['wait', 'Waiting for supplier', 't-sup', all.filter(r => r.status === 'SUP').length],
+                 ['cn', 'Credit notes', 't-cn', all.filter(r => r.cnNo && r.cnStatus !== 'deducted').length],
+                 ['rej', 'Rejected → disposal', 't-rj', all.filter(r => r.status === 'REJ' && !r.dispDate).length],
+                 ['list', 'Supplier list', 't-ink', S.suppliers.size]];
+      $('#supTabs').innerHTML = T.map(([k, l, t, n]) => `<button type="button" role="tab" aria-selected="${k === supTab}" class="stab ${t} ${k === supTab ? 'on' : ''}" data-stab="${k}"><span class="stab-ic">${ic(TABIC[k], 17)}</span>${l}<span class="stab-n">${num(n)}</span></button>`).join('');
+      document.querySelectorAll('#view .sp-sec').forEach(el => el.classList.toggle('off', el.dataset.st !== supTab)); }
+    const wait = this.waitRows();
+    const P_wait = paginate('wait', wait, [$('#spF').value, $('#spQ').value].join('|'));
+    const groups = {}; P_wait.rows.forEach(r => (groups[r.rtvNo || '(no RTV)'] ??= []).push(r));
+    const keys = Object.keys(groups).sort((a,b) => (groups[a][0].rtvDate||'').localeCompare(groups[b][0].rtvDate||''));
+    $('#spCount').textContent = wait.length ? `${plural(wait.length,'line')} in ${plural(new Set(wait.map(r => r.rtvNo)).size,'return')}` : '';
+    $('#spWait').innerHTML = !wait.length ? empty('truck','Nothing is waiting at a supplier','Go to step 1, Not Good, tick lines and choose Return to supplier.') :
+    `<div class="tw lst"><table><thead><tr><th>Product</th><th>Branch</th><th>Reason</th><th>Expiry</th><th class="r">Qty</th><th class="r">Value</th><th class="r">Settle with</th></tr></thead><tbody>
+      ${keys.map(k => { const g = groups[k], r0 = g[0], d = days(r0.rtvDate);
+        return `<tr class="grp"><td colspan="7"><div class="grp-h"><span><b>${esc(k)}</b></span><span><b>${esc(r0.supplier)}</b></span>
+          <span class="meta">Returned ${fmtD(r0.rtvDate)}, <span class="${d > lim('ageSup') ? 'warn' : ''}">${plural(d,'day')} ago</span></span>
+          <span class="meta">${plural(g.length,'line')}, ${num(sum(g, r => r.qty))} pcs, ${money(sum(g, val))}</span>
+          <span style="margin-left:auto"><button class="btn sm" data-a="print" data-rtv="${esc(k)}">${ic('print',14)} Print RTV</button></span></div></td></tr>` +
+        g.map(r => `<tr><td>${prod(r)}</td><td>${esc(r.branch)}</td><td>${reason(r)}</td><td class="nowrap">${fmtD(r.expiry)}</td>
+          <td class="r"><b>${num(r.qty)}</b></td><td class="r">${money(val(r))}</td>
+          <td class="r nowrap"><button class="btn sm solid t-bl" data-a="exc" data-id="${r.id}">${ic('swap',14)} Exchange</button>
+            <button class="btn sm solid t-cn" data-a="cn" data-id="${r.id}">${ic('receipt',14)} Credit note</button>
+            <button class="btn sm soft t-rj" data-a="rej" data-id="${r.id}" title="Supplier refuses exchange and credit note">Rejected</button>
+            <button class="btn sm ghost" data-a="undo" data-id="${r.id}" title="Back to warehouse">${ic('undo',14)}</button></td></tr>`).join(''); }).join('')}
+      </tbody><tfoot><tr><td colspan="4">${plural(wait.length,'line')}</td><td class="r">${num(sum(wait, r => r.qty))}</td><td class="r">${money(sum(wait, val))}</td><td></td></tr></tfoot></table></div>${P_wait.foot}`;
+    const cn = this.cnRows();
+    const P_cn = paginate('cn', cn, [$('#spF').value, $('#spQ').value, $('#cnF').value].join('|'));
+    $('#spCN').innerHTML = !cn.length ? empty('receipt','No credit notes here','Credit notes appear when you settle a returned line with Credit note.') :
+    `<div class="tw lst"><table><thead><tr><th>Credit note</th><th>Supplier</th><th>Product</th><th>RTV</th><th class="r">Amount</th><th>Status</th><th>Deducted on invoice</th><th></th></tr></thead>
+      <tbody>${P_cn.rows.map(r => { const ded = r.cnStatus === 'deducted', d = days(r.cnDate);
+        return `<tr><td><b>${esc(r.cnNo)}</b><div class="sub">${fmtD(r.cnDate)}</div></td><td>${esc(r.supplier)}</td>
+        <td>${prod(r)}${r.status === 'EXC' ? '<span class="sub">for missing pcs in exchange</span>' : ''}</td><td class="sub">${esc(r.rtvNo)}</td>
+        <td class="r"><b>${money(r.cnAmount)}</b></td>
+        <td><div class="stk">${badge(ded ? 'DED' : 'CNP')}${!ded ? `<div class="sub ${d > lim('ageCN') ? 'warn' : ''}">${plural(d,'day')}</div>` : ''}</div></td>
+        <td>${ded ? `<b>${esc(r.invNo)}</b><div class="sub">${fmtD(r.invDate)}</div>` : '<span class="sub">Not yet</span>'}</td>
+        <td class="r nowrap">${ded ? `<button class="btn sm ghost" data-a="unded" data-id="${r.id}" title="Undo deduction">${ic('undo',14)}</button>`
+          : `<button class="btn sm solid t-cn" data-a="ded" data-id="${r.id}">Mark deducted</button><button class="btn sm ghost" data-a="undo" data-id="${r.id}" title="Back to At Supplier">${ic('undo',14)}</button>`}</td></tr>`; }).join('')}</tbody>
+      <tfoot><tr><td colspan="4">${plural(cn.length,'credit note')}</td><td class="r">${money(sum(cn, r => r.cnAmount))}</td><td colspan="3"></td></tr></tfoot></table></div>${P_cn.foot}`;
+    const rf = $('#rjF').value;
+    const rjs = this.rjRows();
+    const P_rej = paginate('rej', rjs, [$('#spF').value, $('#spQ').value, $('#rjF').value].join('|'));
+    $('#spRej').innerHTML = !rjs.length ? empty('check', rf === 'w' ? 'Nothing waiting for disposal' : 'No rejected lines here', 'Lines appear here when a supplier refuses both exchange and credit note.') :
+    `<div class="tw lst"><table><thead><tr><th>Product</th><th>Supplier</th><th>RTV</th><th>Rejected on</th><th>Reason</th><th class="r">Qty</th><th class="r">Loss</th><th>Status</th><th></th></tr></thead>
+      <tbody>${P_rej.rows.map(r => { const d = days(r.settleDate); return `<tr><td>${prod(r)}</td><td>${esc(r.supplier)}</td><td class="sub">${esc(r.rtvNo)}</td>
+        <td class="nowrap">${fmtD(r.settleDate)}${!r.dispDate ? `<div class="sub ${d > lim('ageRej') ? 'warn' : ''}">${plural(d,'day')} ago</div>` : ''}</td><td>${esc(r.rejReason||'')}</td>
+        <td class="r"><b>${num(r.qty)}</b></td><td class="r">${money(val(r))}</td>
+        <td>${r.dispDate ? `<div class="stk">${badge('DISP')}<div class="sub">${fmtD(r.dispDate)}${r.dispNo ? ', ' + esc(r.dispNo) : ''}</div></div>` : badge('REJ')}</td>
+        <td class="r nowrap">${r.dispDate ? `<button class="btn sm ghost" data-a="undisp" data-id="${r.id}" title="Undo disposal">${ic('undo',14)}</button>`
+          : `<button class="btn sm solid t-disp" data-a="disp" data-id="${r.id}">${ic('trash',14)} Mark disposed</button><button class="btn sm ghost" data-a="undo" data-id="${r.id}" title="Back to At Supplier">${ic('undo',14)}</button>`}</td></tr>`; }).join('')}</tbody>
+      <tfoot><tr><td colspan="5">${plural(rjs.length,'line')}</td><td class="r">${num(sum(rjs, r => r.qty))}</td><td class="r">${money(sum(rjs, val))}</td><td colspan="2"></td></tr></tfoot></table></div>${P_rej.foot}`;
+    const sups = [...S.suppliers.values()].sort((a,b) => a.name.localeCompare(b.name));
+    const P_sup = paginate('sup', sups, '');
+    $('#spMaster').innerHTML = !sups.length ? `<div class="p-b sub">No suppliers saved yet. Names typed in lines still appear in the lists.</div>` :
+    `<div class="tw lst"><table><thead><tr><th>Supplier</th><th>Contact person</th><th>Phone</th><th>Return terms</th><th></th></tr></thead><tbody>
+      ${P_sup.rows.map(s => `<tr><td><b>${esc(s.name)}</b></td><td>${esc(s.contact)}</td><td>${esc(s.phone)}</td><td>${esc(s.terms)}</td>
+      <td class="r nowrap"><button class="btn sm ghost" data-a="editsup" data-id="${s.id}" title="Edit">${ic('edit',14)}</button><button class="btn sm ghost" data-a="delsup" data-id="${s.id}" title="Remove">${ic('trash',14)}</button></td></tr>`).join('')}</tbody></table></div>${P_sup.foot}`;
+  }
+};
+function settleExchange(r) {
+  const f = modal({ title: 'Exchange: receive good product', tone: 't-bl', ok: 'Receive good product',
+    sub: `${esc(r.supplier)}, ${esc(r.rtvNo)}. <b>${esc(r.name)}</b>, ${r.qty} pcs returned.`,
+    body: `<div class="fg"><label class="f">Date received<input type="date" name="d" value="${today()}" required></label>
+      <label class="f">Good quantity received<input type="number" name="q" min="0" max="${r.qty}" step="1" value="${r.qty}" required></label>
+      <label class="f">New expiry date <span class="req">required</span><input type="date" name="exp" required></label><label class="f">Supplier document no<input name="doc"></label>
+      <label class="f s2">Note<input name="note"></label></div>
+      <div id="shortBox" class="info t-cn" hidden><b><span id="shortQ"></span> pcs missing.</b> If the supplier gives a credit note for them, enter it here (optional).
+        <div class="fg" style="margin-top:10px"><label class="f">Credit note no<input name="cnNo"></label><label class="f">Credit note amount ($)<input type="number" step="0.01" min="0" name="cnAmt"></label></div></div>`,
+    onOk: async d => {
+      const q = +d.q;
+      if (q > 0 && !d.exp) { toast('Enter the new expiry date of the good product', 1); return false; }
+      if (q > 0 && d.exp <= d.d) { toast('New expiry date must be after the date received', 1); return false; }
+      const g = { id: uid(), createdAt: Date.now(), date: d.d, supplier: r.supplier, barcode: r.barcode, name: r.name, qty: q, cost: r.cost,
+        expiry: d.exp, source: 'Exchange', ngId: r.id, rtvNo: r.rtvNo, fromBranch: r.branch, doc: d.doc.trim(), note: d.note.trim(), dispatches: [] };
+      const n = { ...clone(r), status: 'EXC', settleDate: d.d, exQty: q, settleNote: d.note.trim() };
+      if (q > 0) { n.goodId = g.id; await put('good', g); }
+      if (q < r.qty && d.cnNo.trim()) Object.assign(n, { cnNo: d.cnNo.trim(), cnDate: d.d, cnAmount: +d.cnAmt || 0, cnStatus: 'pending' });
+      await put('ng', n); toast(`${q} good pcs received into Good stock`);
+    } });
+  const upd = () => { f.exp.required = (+f.q.value || 0) > 0; const s = r.qty - (+f.q.value||0); f.querySelector('#shortBox').hidden = s <= 0; f.querySelector('#shortQ').textContent = s; f.cnAmt.value = (Math.max(0,s) * (+r.cost||0)).toFixed(2); };
+  f.q.addEventListener('input', upd); f.exp.min = isoD(addD(new Date(today() + 'T00:00'), 1));
+}
+function settleCN(r) {
+  modal({ title: 'Credit note', tone: 't-cn', ok: 'Save credit note',
+    sub: `${esc(r.supplier)}, ${esc(r.rtvNo)}. <b>${esc(r.name)}</b>, ${r.qty} pcs × ${money(r.cost)}.`,
+    body: `<div class="fg"><label class="f">Credit note no<input name="no" required></label><label class="f">Credit note date<input type="date" name="d" value="${today()}" required></label>
+      <label class="f">Amount ($)<input type="number" name="amt" step="0.01" min="0" value="${val(r).toFixed(2)}" required></label>
+      <label class="f">Already deducted on invoice<input name="inv" placeholder="Leave empty if not yet"></label>
+      <label class="f s2">Note<input name="note"></label></div>`,
+    onOk: async d => {
+      const n = { ...clone(r), status: 'CN', settleDate: d.d, cnNo: d.no.trim(), cnDate: d.d, cnAmount: +d.amt, cnStatus: d.inv.trim() ? 'deducted' : 'pending', settleNote: d.note.trim() };
+      if (d.inv.trim()) { n.invNo = d.inv.trim(); n.invDate = d.d; }
+      await put('ng', n); toast(`Credit note ${esc(n.cnNo)} saved (${money(n.cnAmount)})`);
+    } });
+}
+function settleReject(r) {
+  modal({ title: 'Supplier rejected the return', tone: 't-rj', ok: 'Mark rejected',
+    sub: `${esc(r.supplier)}, ${esc(r.rtvNo)}. <b>${esc(r.name)}</b>, ${r.qty} pcs. The supplier gives no exchange and no credit note.`,
+    body: `<div class="fg"><label class="f">Date rejected<input type="date" name="d" value="${today()}" required></label>
+      <label class="f">Reject reason<input name="why" required placeholder="e.g. returned after deadline"></label>
+      <label class="f s2">Note<input name="note"></label></div>
+      <div class="info t-rj">The product comes back to the warehouse and waits for disposal. It is a loss of <b>${money(val(r))}</b>.</div>`,
+    onOk: async d => { await put('ng', { ...clone(r), status: 'REJ', settleDate: d.d, rejReason: d.why.trim(), settleNote: d.note.trim() }); toast(`${esc(r.name)} marked rejected`); } });
+}
+function markDisposed(r) {
+  modal({ title: 'Mark as disposed', tone: 't-disp', ok: 'Mark disposed', sub: `<b>${esc(r.name)}</b>, ${r.qty} pcs, loss ${money(val(r))}`,
+    body: `<div class="fg"><label class="f">Disposal date<input type="date" name="d" value="${today()}" required></label>
+      <label class="f">Disposal no / approved by<input name="no" required placeholder="e.g. DSP-001 / Manager"></label></div>`,
+    onOk: async d => { await put('ng', { ...clone(r), dispDate: d.d, dispNo: d.no.trim() }); toast(`${esc(r.name)} marked disposed`); } });
+}
+function markDeducted(r) {
+  modal({ title: 'Mark credit note as deducted', tone: 't-cn', ok: 'Mark deducted', sub: `${esc(r.cnNo)} from ${esc(r.supplier)}, ${money(r.cnAmount)}`,
+    body: `<div class="fg"><label class="f">Invoice no<input name="inv" required></label><label class="f">Invoice date<input type="date" name="d" value="${today()}" required></label></div>`,
+    onOk: async d => { await put('ng', { ...clone(r), cnStatus: 'deducted', invNo: d.inv.trim(), invDate: d.d }); toast(`${esc(r.cnNo)} marked deducted`); } });
+}
+
+/* ================= 3  GOOD ================= */
+TABS.good = {
+  html: () => `
+  <div class="ph"><div><h1>Good stock<span class="kh">ទំនិញល្អ</span></h1>
+    <p>Good product from suppliers, waiting to be sent to a store. Earliest expiry first.</p></div>
+    <div class="act"><button class="btn solid t-ink" id="gAdd">${ic('plus',15)} Receive good product</button></div></div>
+  <section class="panel edge t-good"><div class="p-h"><h2>In warehouse<span class="kh">ក្នុងឃ្លាំង</span></h2><span class="note" id="gCount"></span>
+      <div class="act"><button class="btn sm" id="gCsv">${ic('dl',14)} Export CSV</button></div></div>
+    <div class="tools"><div class="search">${ic('search')}<input type="search" id="gQ" placeholder="Search product, barcode, RTV or transfer no"></div><select id="gSup"></select>
+      <label class="f" style="flex-direction:row;align-items:center;gap:8px;font-size:13.5px;color:var(--ink)"><input type="checkbox" id="gBal" checked> Only lines with stock left</label></div>
+    <div id="gList"></div></section>
+  <section class="panel tone t-tl"><div class="p-h"><h2>Sent to stores<span class="kh">បញ្ជូនទៅហាង</span></h2><span class="note" id="dCount"></span>
+    <div class="act"><select id="dBr" style="width:auto"></select><button class="btn sm" id="dCsv">${ic('dl',14)} Export CSV</button></div></div><div id="dList"></div></section>`,
+  init() {
+    ['gQ','gSup','gBal','dBr'].forEach(id => $('#'+id).addEventListener('input', () => this.refresh()));
+    $('#gAdd').onclick = receiveManual;
+    $('#gCsv').onclick = () => download(`good-in-warehouse-${today()}.csv`, toCSV([['Received','Supplier','Barcode','Product','Expiry','Source','RTV no','Received qty',...BR().map(b => 'Sent ' + b),'In warehouse','Unit cost'],
+      ...this.rows().map(g => [g.date,g.supplier,g.barcode,g.name,g.expiry,g.source,g.rtvNo,g.qty,...BR().map(b => goodSent(g,b)),goodBal(g),g.cost])]), 'text/csv');
+    $('#dCsv').onclick = () => download(`sent-to-stores-${today()}.csv`, toCSV([['Date','Store','Transfer no','Barcode','Product','Supplier','Expiry','Qty','Unit cost','Value','Sent by','RTV no'],
+      ...this.dsRows().map(({g,d}) => [d.date,d.branch,d.doc,g.barcode,g.name,g.supplier,g.expiry,d.qty,g.cost,(+d.qty||0)*(+g.cost||0),d.by,g.rtvNo])]), 'text/csv');
+    $('#tabRoot').addEventListener('click', e => {
+      const b = e.target.closest('[data-a]'); if (!b) return;
+      const g = S.good.get(b.dataset.id); if (!g || guard()) return;
+      if (b.dataset.a === 'send') dispatch(g);
+      if (b.dataset.a === 'gdel' && !can('ng.delete')) return toast('Only users with Delete lines can delete.', 1);
+      if (b.dataset.a === 'gdel') confirmBox('Delete this good stock line?', `${esc(g.name)}, ${g.qty} pcs received manually.`, 'Delete line', 't-ng', () => remove('good', g.id));
+      if (b.dataset.a === 'dundo') { const i = +b.dataset.i, dp = g.dispatches[i];
+        confirmBox('Undo this transfer?', `${dp.qty} pcs to ${esc(dp.branch)} on ${fmtD(dp.date)} go back into warehouse stock.`, 'Undo transfer', 't-ink',
+          () => { const n = clone(g); n.dispatches.splice(i, 1); put('good', n); toast('Transfer undone'); }); }
+    });
+  },
+  dsRows() { const br = $('#dBr').value, sp = $('#gSup').value, q = $('#gQ').value.trim().toLowerCase();
+    return [...S.good.values()].filter(g => !sp || g.supplier === sp).flatMap(g => (g.dispatches||[]).map((d,i) => ({ g, d, i })))
+      .filter(x => (!br || x.d.branch === br) && canSee(x.d.branch) && (!q || [x.g.name, x.g.barcode, x.g.rtvNo, x.g.doc, x.d.doc, x.d.branch].join(' ').toLowerCase().includes(q)))
+      .sort((a,b) => (b.d.date||'').localeCompare(a.d.date||'') || (b.d.at||0) - (a.d.at||0)); },
+  rows() {
+    const q = $('#gQ').value.trim().toLowerCase(), sp = $('#gSup').value, onlyBal = $('#gBal').checked;
+    return [...S.good.values()].filter(g => (!sp || g.supplier === sp) && (!onlyBal || goodBal(g) > 0) && (!q || [g.name,g.barcode,g.rtvNo,g.doc].join(' ').toLowerCase().includes(q)))
+      .sort((a,b) => (goodBal(b) > 0) - (goodBal(a) > 0) || (a.expiry||'9999').localeCompare(b.expiry||'9999') || (a.date||'').localeCompare(b.date||''));
+  },
+  refresh() {
+    fillSel($('#gSup'), supplierNames(), 'All suppliers');
+    fillSel($('#dBr'), myBR(), 'All stores');
+    const rows = this.rows(), B = BR();
+    $('#gCount').textContent = plural(rows.length, 'line');
+    const P_good = paginate('good', rows, [$('#gQ').value, $('#gSup').value, $('#gBal').checked].join('|'));
+    const gFilt = $('#gQ').value.trim() || $('#gSup').value;
+    $('#gList').innerHTML = !rows.length ? (gFilt ? empty('search', 'No lines match', 'Try another word, or clear the search.') : empty('box', $('#gBal').checked ? 'No good stock waiting' : 'No good stock yet', 'Good product appears here when you settle a returned line with Exchange, or receive it here.')) :
+    `<div class="tw lst"><table><thead><tr><th>Received</th><th>Product</th><th>Supplier</th><th>Expiry</th><th>Source</th><th class="r">Received</th>${B.map(b => `<th class="r">Sent ${esc(b)}</th>`).join('')}<th class="r">In warehouse</th><th></th></tr></thead>
+      <tbody>${P_good.rows.map(g => { const bal = goodBal(g), d = days(g.date); return `<tr>
+        <td class="nowrap">${fmtD(g.date)}${bal > 0 && d > lim('ageGood') ? `<div class="sub warn">${plural(d,'day')} waiting</div>` : ''}</td><td>${prod(g)}</td><td>${esc(g.supplier)}</td><td class="nowrap">${fmtD(g.expiry)}</td>
+        <td>${g.source === 'Exchange' ? `<span class="badge plain t-bl">Exchange</span><div class="sub">${esc(g.rtvNo)}${g.fromBranch ? `, from ${esc(g.fromBranch)}` : ''}</div>` : `<span class="badge plain t-ink">Received here</span>${g.doc ? `<div class="sub">${esc(g.doc)}</div>` : ''}`}</td>
+        <td class="r">${num(g.qty)}</td>${B.map(b => `<td class="r">${num(goodSent(g,b))}</td>`).join('')}
+        <td class="r"><b style="color:${bal > 0 ? 'var(--ink)' : 'var(--ink4)'}">${num(bal)}</b></td>
+        <td class="r nowrap">${bal > 0 ? `<button class="btn sm solid t-good" data-a="send" data-id="${g.id}">${ic('truck',14)} Send to store</button>` : badge('DONE')}
+          ${g.source !== 'Exchange' && !(g.dispatches||[]).length ? `<button class="btn sm ghost" data-a="gdel" data-id="${g.id}" title="Delete">${ic('trash',14)}</button>` : ''}</td></tr>`; }).join('')}</tbody>
+      <tfoot><tr><td colspan="5">${plural(rows.length,'line')}</td><td class="r">${num(sum(rows, g => g.qty))}</td>${B.map(b => `<td class="r">${num(sum(rows, g => goodSent(g,b)))}</td>`).join('')}<td class="r">${num(sum(rows, goodBal))}</td><td></td></tr></tfoot></table></div>${P_good.foot}`;
+    const ds = this.dsRows();
+    $('#dCount').textContent = ds.length ? plural(ds.length, 'transfer') : '';
+    const P_disp = paginate('disp', ds, [$('#dBr').value, $('#gSup').value, $('#gQ').value].join('|'));
+    $('#dList').innerHTML = !ds.length ? (gFilt || $('#dBr').value ? empty('search', 'No transfers match', 'Try another word, store or supplier.') : empty('truck','No transfers yet','Use Send to store on a line above.')) :
+    `<div class="tw lst"><table><thead><tr><th>Date</th><th>Store</th><th>Transfer no</th><th>Product</th><th>Supplier</th><th class="r">Qty</th><th>Sent by</th><th></th></tr></thead>
+      <tbody>${P_disp.rows.map(({g,d,i}) => `<tr><td class="nowrap">${fmtD(d.date)}</td><td><b>${esc(d.branch)}</b></td><td>${esc(d.doc)}</td><td>${prod(g)}</td><td>${esc(g.supplier)}</td>
+        <td class="r"><b>${num(d.qty)}</b></td><td class="sub">${esc(d.by)}</td><td class="r"><button class="btn sm ghost" data-a="dundo" data-id="${g.id}" data-i="${i}" title="Undo transfer">${ic('undo',14)}</button></td></tr>`).join('')}</tbody>
+      <tfoot><tr><td colspan="5">${plural(ds.length,'transfer')}</td><td class="r">${num(sum(ds, x => x.d.qty))}</td><td colspan="2"></td></tr></tfoot></table></div>${P_disp.foot}`;
+  }
+};
+function dispatch(g) {
+  const bal = goodBal(g);
+  modal({ title: 'Send to store', tone: 't-good', ok: 'Confirm transfer', sub: `<b>${esc(g.name)}</b> from ${esc(g.supplier)}. ${bal} pcs in warehouse.`,
+    body: `<div class="fg"><label class="f">Store<select name="br">${brOpts(g.fromBranch)}</select></label>
+      <label class="f">Quantity<input type="number" name="q" min="1" max="${bal}" step="1" value="${bal}" required></label>
+      <label class="f">Date<input type="date" name="d" value="${today()}" required></label><label class="f">Transfer no<input name="doc" value="${nextTransfer()}" required></label>
+      <label class="f s2">Sent by<input name="by" value="${esc(operator())}"></label></div>`,
+    onOk: async d => {
+      const n = clone(S.good.get(g.id) || g); const q = +d.q;
+      if (q > goodBal(n)) { toast(`Only ${goodBal(n)} pcs are in the warehouse`, 1); return false; }
+      n.dispatches = n.dispatches || []; n.dispatches.push({ branch: d.br, qty: q, date: d.d, doc: d.doc.trim(), by: d.by.trim(), at: Date.now() });
+      await put('good', n); toast(`Sent ${q} pcs to ${esc(d.br)}`);
+    } });
+}
+function receiveManual() {
+  if (guard()) return;
+  const f = modal({ title: 'Receive good product', tone: 't-ink', ok: 'Receive', sub: 'For good product that is not linked to a returned line.',
+    body: `<div class="fg"><label class="f">Date<input type="date" name="d" value="${today()}" required></label><label class="f">Supplier<input name="supplier" list="supList" required></label>
+      <label class="f">Barcode<input name="barcode" autocomplete="off"></label><label class="f">Product name<input name="name" required></label>
+      <label class="f">Quantity<input type="number" name="qty" min="1" step="1" required></label><label class="f">Unit cost ($)<input type="number" name="cost" min="0" step="0.01"></label>
+      <label class="f">Expiry date<input type="date" name="exp"></label><label class="f">Supplier document no<input name="doc"></label><label class="f s2">Note<input name="note"></label></div>`,
+    onOk: async d => { await put('good', { id: uid(), createdAt: Date.now(), date: d.d, supplier: d.supplier.trim(), barcode: d.barcode.trim(), name: d.name.trim(),
+      qty: +d.qty, cost: +d.cost || 0, expiry: d.exp, source: 'Manual', doc: d.doc.trim(), note: d.note.trim(), dispatches: [] }); toast(`Received ${d.qty} × ${esc(d.name)}`); } });
+  f.barcode.addEventListener('keydown', e => { if (e.key !== 'Enter') return; e.preventDefault();
+    const p = lookup(f.barcode.value.trim()); if (p) { f.name.value = p.name; f.supplier.value = p.supplier; f.cost.value = p.cost || ''; f.qty.focus(); } });
+}
+
+/* ================= Excel import / export (same layout as NG_Good_Master_List.xlsx) ================= */
+async function loadXLSX() {
+  if (window.XLSX) return window.XLSX;
+  await new Promise((res, rej) => { const sc = document.createElement('script');
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; sc.onload = res; sc.onerror = () => rej(new Error('load')); document.head.appendChild(sc); });
+  return window.XLSX;
+}
+const xlNeed = async () => { try { return await loadXLSX(); } catch { toast('Excel tools could not load. Connect to the internet and try again.', 1); return null; } };
+const nh = h => String(h ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
+const serialFromIso = d => (Date.UTC(+d.slice(0,4), +d.slice(5,7) - 1, +d.slice(8,10)) - Date.UTC(1899, 11, 30)) / 864e5;
+function xDate(v) {
+  if (v == null || v === '') return '';
+  if (typeof v === 'number' && v > 20000 && v < 80000) { const d = new Date(Math.round((v - 25569) * 864e5)); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`; }
+  const s = String(v).trim(); let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  m = s.match(/^(\d{1,2})[-\/. ]([A-Za-z]{3,}|\d{1,2})[-\/. ](\d{2,4})$/);
+  if (m) { const mon = isNaN(m[2]) ? ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(m[2].slice(0,3).toLowerCase()) + 1 : +m[2];
+    let y = +m[3]; if (y < 100) y += 2000; if (mon > 0) return `${y}-${String(mon).padStart(2,'0')}-${m[1].padStart(2,'0')}`; }
+  return '';
+}
+const xNum = v => { if (v === '' || v == null) return null; const n = +String(v).replace(/[$,\s]/g, ''); return isNaN(n) ? null : n; };
+const xTxt = v => String(v ?? '').trim();
+const COLMAP = { date: 'date received', branch: 'branch', barcode: 'barcode', name: 'product name', supplier: 'supplier', reason: 'reason', expiry: 'expiry date',
+  qty: 'qty', cost: 'unit cost ($)', by: 'received by', rtvNo: 'rtv no', rtvDate: 'return date', settle: 'settlement', sdate: 'settle date', gq: 'good qty received',
+  nexp: 'new expiry date', cnNo: 'cn no', cnAmt: 'cn amount ($)', inv: 'deducted on invoice', ddate: 'deduct date', rej: 'reject reason', dpdate: 'disposal date',
+  dpno: 'disposal no / approved by', note: 'note' };
+const sigOf = r => [r.date, r.branch, nh(r.barcode || r.name), +r.qty, r.rtvNo || ''].join('|');
+
+function parseMaster(X, wb) {
+  const out = { ng: [], good: [], suppliers: [], errors: [], examples: 0, rows: 0 };
+  const shName = wb.SheetNames.find(n => nh(n) === 'master_list') || wb.SheetNames[0];
+  const rows = X.utils.sheet_to_json(wb.Sheets[shName], { header: 1, raw: true, defval: '' });
+  const hr = rows.findIndex(r => r.some(c => nh(c) === 'product name'));
+  if (hr < 0) { out.errors.push('No "Product name" header found. Use the Master_List sheet from the Excel master list.'); return out; }
+  const head = rows[hr].map(nh), at = {};
+  for (const [k, h] of Object.entries(COLMAP)) { const i = head.indexOf(h); if (i >= 0) at[k] = i; }
+  for (const k of ['date', 'branch', 'name', 'supplier', 'qty']) if (at[k] == null) out.errors.push(`Missing column "${COLMAP[k]}".`);
+  if (out.errors.length) return out;
+  const sends = head.map((h, i) => { const m = h.match(/^sent (.+) \(qty\)$/); if (!m) return null;
+    const b = m[1], br = BR().find(x => nh(x) === b) || rows[hr][i].toString().replace(/^Sent\s+/i, '').replace(/\s*\(qty\)$/i, '');
+    return { br, q: i, d: head.indexOf('date sent ' + b), t: head.indexOf('transfer no ' + b) }; }).filter(Boolean);
+  const existing = new Set([...S.ng.values()].map(sigOf)); const seen = new Set();
+  rows.slice(hr + 1).forEach((row, i) => {
+    const g = k => at[k] == null ? '' : row[at[k]], rn = hr + i + 2, name = xTxt(g('name'));
+    if (!name) return;
+    out.rows++;
+    const note = xTxt(g('note'));
+    const id = uid() + i, r = { id, createdAt: Date.now() + i, date: xDate(g('date')), branch: xTxt(g('branch')), barcode: xTxt(g('barcode')), name,
+      supplier: xTxt(g('supplier')), reason: /damag/i.test(g('reason')) ? 'Damaged' : 'Expired', expiry: xDate(g('expiry')), qty: xNum(g('qty')), cost: xNum(g('cost')) || 0,
+      by: xTxt(g('by')), note, status: 'WH', importedRow: rn };
+    const err = m => out.errors.push(`Row ${rn} (${esc(name)}): ${m}`);
+    if (!r.date) return err('Date received is missing or not a date.');
+    if (!r.branch) return err('Branch is empty.');
+    if (!r.supplier) return err('Supplier is empty.');
+    if (!(r.qty > 0)) return err('Qty must be more than 0.');
+    const rtv = xTxt(g('rtvNo')), settle = nh(g('settle'));
+    if (rtv) Object.assign(r, { status: 'SUP', rtvNo: rtv, rtvDate: xDate(g('rtvDate')) || r.date });
+    if (settle && !rtv) return err('Settlement is filled but RTV no is empty.');
+    const sd = xDate(g('sdate')) || r.rtvDate || r.date, cnNo = xTxt(g('cnNo'));
+    let good = null;
+    if (settle === 'exchange') {
+      const gq = xNum(g('gq')) ?? r.qty;
+      if (gq > r.qty) return err('Good qty received is more than Qty.');
+      Object.assign(r, { status: 'EXC', settleDate: sd, exQty: gq });
+      if (gq > 0) {
+        good = { id: 'g' + id, createdAt: Date.now() + i, date: sd, supplier: r.supplier, barcode: r.barcode, name: r.name, qty: gq, cost: r.cost, expiry: xDate(g('nexp')),
+          source: 'Exchange', ngId: id, rtvNo: rtv, fromBranch: r.branch, doc: '', note: '', dispatches: [] };
+        for (const s2 of sends) { const q = xNum(row[s2.q]); if (q > 0) good.dispatches.push({ branch: s2.br, qty: q, date: s2.d >= 0 ? xDate(row[s2.d]) || sd : sd, doc: s2.t >= 0 ? xTxt(row[s2.t]) : '', by: '', at: Date.now() + i }); }
+        if (goodSent(good) > gq) return err('Sent to stores is more than Good qty received.');
+        r.goodId = good.id;
+      }
+    } else if (settle === 'credit note') Object.assign(r, { status: 'CN', settleDate: sd });
+    else if (settle === 'rejected') Object.assign(r, { status: 'REJ', settleDate: sd, rejReason: xTxt(g('rej')), dispDate: xDate(g('dpdate')) || undefined, dispNo: xTxt(g('dpno')) || undefined });
+    else if (settle) return err(`Settlement "${esc(g('settle'))}" is not Exchange, Credit note or Rejected.`);
+    if (cnNo) { const inv = xTxt(g('inv'));
+      Object.assign(r, { cnNo, cnDate: sd, cnAmount: xNum(g('cnAmt')) ?? val(r), cnStatus: inv ? 'deducted' : 'pending' });
+      if (inv) Object.assign(r, { invNo: inv, invDate: xDate(g('ddate')) || sd }); }
+    if (/^example/i.test(note)) { r.isExample = true; out.examples++; }
+    const sg = sigOf(r); if (existing.has(sg) || seen.has(sg)) { r.isDup = true; } seen.add(sg);
+    out.ng.push(r); if (good) { good.forNg = id; out.good.push(good); }
+  });
+  const sp = wb.SheetNames.find(n => nh(n) === 'suppliers');
+  if (sp) { const sr = X.utils.sheet_to_json(wb.Sheets[sp], { header: 1, raw: true, defval: '' }); const h = sr.findIndex(r => r.some(c => nh(c) === 'supplier name'));
+    if (h >= 0) { const hd = sr[h].map(nh), ix = n => hd.indexOf(n);
+      sr.slice(h + 1).forEach(r => { const n = xTxt(r[ix('supplier name')]); if (n) out.suppliers.push({ name: n, contact: xTxt(r[ix('contact person')]), phone: xTxt(r[ix('phone')]), terms: xTxt(r[ix('return terms')]) }); }); } }
+  return out;
+}
+
+async function importExcel(file) {
+  if (guard()) return; if (!can('adm.import')) return toast('Your privilege does not allow importing.', 1);
+  const X = await xlNeed(); if (!X) return;
+  let res; try { res = parseMaster(X, X.read(await file.arrayBuffer(), { type: 'array' })); } catch { return toast('This file could not be read as Excel.', 1); }
+  if (!res.rows && res.errors.length) return modal({ title: 'Cannot import this file', body: `<p style="margin:0">${res.errors.join('<br>')}</p>`, ok: 'Close', onOk: () => {} });
+  const dups = res.ng.filter(r => r.isDup).length, newSup = res.suppliers.filter(s2 => !supplierNames().some(n => nh(n) === nh(s2.name)));
+  const unknownBr = [...new Set(res.ng.map(r => r.branch))].filter(b => !BR().includes(b));
+  const f = modal({ title: 'Import from Excel', sub: esc(file.name), ok: 'Import',
+    body: `<div class="imp-sum">
+        <div><b>${num(res.rows)}</b><span>lines in file</span></div>
+        <div><b>${num(res.examples)}</b><span>example rows</span></div>
+        <div><b>${num(dups)}</b><span>already in app</span></div>
+        <div class="${res.errors.length ? 'bad' : ''}"><b>${num(res.errors.length)}</b><span>rows with errors</span></div></div>
+      <label class="f" style="flex-direction:row;align-items:center;gap:8px;margin-top:14px;color:var(--ink)"><input type="checkbox" name="skipEx" checked> Skip example rows (Note starts with "EXAMPLE")</label>
+      ${newSup.length ? `<p class="sub" style="margin:10px 0 0">${plural(newSup.length, 'new supplier')} will be added to the supplier list.</p>` : ''}
+      ${unknownBr.length ? `<div class="info t-sup">Branch ${unknownBr.map(esc).join(', ')} is not in Settings → Branches. Lines are imported, but add the branch so it shows in the lists.</div>` : ''}
+      ${res.errors.length ? `<div class="info t-ng"><b>These rows will be skipped:</b><br>${res.errors.slice(0, 8).join('<br>')}${res.errors.length > 8 ? `<br>…and ${res.errors.length - 8} more` : ''}</div>` : ''}
+      <p class="sub" style="margin:12px 0 0" id="impCount"></p>`,
+    onOk: async d => {
+      const take = res.ng.filter(r => !r.isDup && !(d.skipEx && r.isExample));
+      if (!take.length && !newSup.length) { toast('Nothing new to import', 1); return false; }
+      const ids = new Set(take.map(r => r.id)), goods = res.good.filter(g => ids.has(g.forNg));
+      const clean = o => { const c = { ...o }; ['isDup','isExample','forNg'].forEach(k => delete c[k]); Object.keys(c).forEach(k => c[k] === undefined && delete c[k]); return c; };
+      const sups = newSup.map(s2 => ({ id: uid(), createdAt: Date.now(), ...s2 }));
+      const stamp = o => ({ ...clean(o), updatedAt: Date.now(), updatedBy: ME?.name || '' });
+      await putMany([...goods.map(g => ['good', stamp(g)]), ...take.map(r => ['ng', stamp(r)]), ...sups.map(s2 => ['suppliers', s2])]);
+      toast(`Imported ${plural(take.length, 'line')}${sups.length ? ` and ${plural(sups.length, 'supplier')}` : ''}`);
+    } });
+  const cnt = () => { const n = res.ng.filter(r => !r.isDup && !(f.skipEx.checked && r.isExample)).length; f.querySelector('#impCount').textContent = `${plural(n, 'line')}${newSup.length ? ` and ${plural(newSup.length, 'supplier')}` : ''} will be imported.`; f.querySelector('.mdl-f .solid').disabled = !n && !newSup.length; };
+  f.skipEx.addEventListener('change', cnt); cnt();
+}
+
+async function exportExcel() {
+  if (!can('export')) return toast('Your privilege does not allow exporting.', 1);
+  const X = await xlNeed(); if (!X) return;
+  const B = BR(), lines = NG().sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.createdAt || 0) - (b.createdAt || 0));
+  const head = ['No','Date received','Branch','Barcode','Product name','Supplier','Reason','Expiry date','Qty','Unit cost ($)','Value ($)','Received by','RTV no','Return date',
+    'Settlement','Settle date','Good qty received','New expiry date','CN no','CN amount ($)','Deducted on invoice','Deduct date','Reject reason','Disposal date','Disposal no / approved by','Loss ($)',
+    ...B.flatMap(b => [`Sent ${b} (qty)`, `Date sent ${b}`, `Transfer no ${b}`]), 'Good left in WH','Status','CN status','Days waiting','Note'];
+  const dateCols = new Set(['Date received','Expiry date','Return date','Settle date','New expiry date','Deduct date','Disposal date', ...B.map(b => `Date sent ${b}`)].map(h => head.indexOf(h)));
+  const SET = { EXC: 'Exchange', CN: 'Credit note', REJ: 'Rejected' };
+  const data = lines.map((r, i) => {
+    const g = r.goodId && S.good.get(r.goodId), main = stInfo(r)[0][0], last = b => (g?.dispatches || []).filter(d => d.branch === b).sort((x, y) => (x.date || '').localeCompare(y.date || '')).pop();
+    const dw = main === 'WH' ? days(r.date) : main === 'SUP' ? days(r.rtvDate) : ['EXC','PART','CNP','REJ'].includes(main) ? days(r.settleDate) : '';
+    return [i + 1, r.date, r.branch, r.barcode, r.name, r.supplier, r.reason, r.expiry, r.qty, r.cost, val(r), r.by, r.rtvNo, r.rtvDate,
+      SET[r.status] || '', r.settleDate, r.status === 'EXC' ? (g ? g.qty : 0) : '', g?.expiry, r.cnNo, r.cnNo ? r.cnAmount : '', r.invNo, r.invDate,
+      r.rejReason, r.dispDate, r.dispNo, r.status === 'REJ' ? val(r) : '',
+      ...B.flatMap(b => { const q = g ? goodSent(g, b) : 0, l = last(b); return [q || '', q ? l?.date : '', q ? l?.doc : '']; }),
+      g ? goodBal(g) : '', SDEF[main][1], r.cnNo ? (r.cnStatus === 'deducted' ? 'Deducted' : 'Pending deduction') : '', dw, r.note];
+  });
+  const aoa = [[`${company()} – Not Good & Good Stock Control – Master List`], [`Exported from the web app on ${fmtD(today())}${ME ? ' by ' + ME.name : ''}. Import this file back in Settings → Backup & data.`], head, ...data];
+  const ws = X.utils.aoa_to_sheet(aoa);
+  data.forEach((row, ri) => dateCols.forEach(ci => { const v = row[ci]; if (v && /^\d{4}-\d{2}-\d{2}$/.test(v)) { const ref = X.utils.encode_cell({ r: ri + 3, c: ci }); ws[ref] = { t: 'n', v: serialFromIso(v), z: 'dd-mmm-yyyy' }; } }));
+  ws['!cols'] = head.map(h => ({ wch: Math.max(10, Math.min(28, h.length + 2)) })); ws['!cols'][4] = { wch: 28 };
+  ws['!autofilter'] = { ref: X.utils.encode_range({ s: { r: 2, c: 0 }, e: { r: 2 + data.length, c: head.length - 1 } }) };
+  const sws = X.utils.aoa_to_sheet([['Supplier list'], [''], ['Supplier name','Contact person','Phone','Return terms'],
+    ...[...S.suppliers.values()].sort((a, b) => a.name.localeCompare(b.name)).map(s2 => [s2.name, s2.contact, s2.phone, s2.terms])]);
+  sws['!cols'] = [{ wch: 28 }, { wch: 22 }, { wch: 16 }, { wch: 26 }];
+  const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, 'Master_List'); X.utils.book_append_sheet(wb, sws, 'Suppliers');
+  const buf = X.write(wb, { bookType: 'xlsx', type: 'array' });
+  download(`${company().replace(/\W+/g, '-')}-Master-List-${today()}.xlsx`, buf, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  toast(`Exported ${plural(data.length, 'line')} to Excel`);
+}
+
+/* ================= RTV document ================= */
+function printRTV(no) {
+  const lines = [...S.ng.values()].filter(r => r.rtvNo === no);
+  if (!lines.length) return toast('No lines found for ' + esc(no), 1);
+  const r0 = lines[0], sp = [...S.suppliers.values()].find(s => s.name === r0.supplier) || {};
+  $('#print').innerHTML = `<div class="doc">
+    <div class="doc-h"><div><div class="co">${esc(company())}</div><div class="doc-app">Returns &amp; replacement control</div></div><div class="ti">Return to Vendor<div class="pd">Date ${new Date().toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div></div></div>
+    <div class="doc-meta">
+      <div><span>RTV number</span><b>${esc(no)}</b></div><div><span>Return date</span><b>${fmtD(r0.rtvDate)}</b></div>
+      <div><span>Supplier</span><b>${esc(r0.supplier)}</b></div><div><span>Contact</span>${esc(sp.contact || '')} ${esc(sp.phone || '')}</div>
+      <div><span>Prepared by</span>${esc(r0.rtvBy || operator())}</div><div><span>Note</span>${esc(r0.rtvNote || '')}</div></div>
+    <table><thead><tr><th>#</th><th>Barcode</th><th>Product</th><th>From</th><th>Reason</th><th>Expiry</th><th class="r">Qty</th><th class="r">Unit cost</th><th class="r">Amount</th></tr></thead>
+      <tbody>${lines.map((r,i) => `<tr><td>${i+1}</td><td>${esc(r.barcode)}</td><td>${esc(r.name)}</td><td>${esc(r.branch)}</td><td>${esc(r.reason)}</td><td>${fmtD(r.expiry)}</td>
+        <td class="r">${num(r.qty)}</td><td class="r">${money(r.cost)}</td><td class="r">${money(val(r))}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td colspan="6"><b>Total</b></td><td class="r"><b>${num(sum(lines, r => r.qty))}</b></td><td></td><td class="r"><b>${money(sum(lines, val))}</b></td></tr></tfoot></table>
+    <p style="margin-top:14px">Settlement requested: exchange for good product, or credit note deducted from the next invoice.</p>
+    <div class="sign"><div>Prepared by (Warehouse)</div><div>Driver</div><div>Received by (Supplier)</div></div></div>`;
+  const oldTitle = document.title; document.title = no;   // PDF file name = RTV number
+  try { window.print(); } catch { toast('Printing is not available here. Open the HTML file in Chrome to print.', 1); }
+  setTimeout(() => document.title = oldTitle, 1000);
+}
+
+/* ================= SETTINGS ================= */
+let setSec = 'general', selRole = null, roleDraft = null;
+const SECS = [
+  ['general', 'General', 'grid', () => can('set.company') || can('set.branches') || can('set.limits')],
+  ['users', 'Users', 'user', () => can('adm.users')],
+  ['roles', 'Privileges', 'shield', () => can('adm.roles')],
+  ['account', 'My account', 'key', () => !!ME],
+  ['data', 'Backup & data', 'db', () => can('backup') || can('adm.restore') || can('adm.wipe') || can('export') || can('adm.import')],
+];
+TABS.settings = {
+  html: () => { const c = cfg(); return `
+  <div class="ph"><div><h1>Settings<span class="kh">ការកំណត់</span></h1><p>Company details, users, privileges and backups.</p></div></div>
+  <div class="set-layout">
+    <nav class="set-nav" id="setNav" aria-label="Settings sections"></nav>
+    <div class="set-body">
+      <section class="panel sec" data-sec="general">
+        <div class="p-h"><h2>General<span class="kh">ទូទៅ</span></h2><span class="note">Company name, branches and alert limits.</span></div>
+        <form class="set-grid" id="fCompany"><div><h3>Company</h3><p>Shown in the header, on the sign-in screen and on printed RTV documents.</p></div>
+          <div class="fg"><label class="f s4">Company name<input name="company" value="${esc(c.company || '')}" placeholder="Baby Town" required></label>
+            <div class="s2 fbtn"><button class="btn solid t-ink">Save company</button></div></div></form>
+        <form class="set-grid" id="fBranches"><div><h3>Branches / stores</h3><p>Used in Branch and Store lists everywhere in the app.</p></div>
+          <div class="fg"><label class="f s4">Branches / stores<input name="branches" value="${esc(BR().join(', '))}" required><span class="sub" style="font-weight:400">Separate with commas, for example BT1-TPR, BT2-PS, BT3</span></label>
+            <div class="s2 fbtn"><button class="btn solid t-ink">Save branches</button></div></div></form>
+        <form class="set-grid" id="fLimits"><div><h3>Alert limits</h3><p>A line shows as overdue on the Overview when it waits longer than this many days.</p></div>
+          <div class="fg"><label class="f s2">Not Good in warehouse<input type="number" min="1" name="ageWH" value="${lim('ageWH')}" required></label>
+            <label class="f s2">At supplier<input type="number" min="1" name="ageSup" value="${lim('ageSup')}" required></label>
+            <label class="f s2">Credit note not deducted<input type="number" min="1" name="ageCN" value="${lim('ageCN')}" required></label>
+            <label class="f s2">Good stock not sent<input type="number" min="1" name="ageGood" value="${lim('ageGood')}" required></label>
+            <label class="f s2">Rejected, not disposed<input type="number" min="1" name="ageRej" value="${lim('ageRej')}" required></label>
+            <div class="s2 fbtn"><button class="btn solid t-ink">Save alert limits</button></div></div></form>
+      </section>
+
+      <section class="panel sec" data-sec="users" id="usersSec">
+        <div class="p-h"><h2>Users<span class="kh">អ្នកប្រើប្រាស់</span></h2><span class="note" id="userCount"></span>
+          <div class="act"><button class="btn solid t-ink" type="button" id="addUser">${ic('plus',15)} Add user</button></div></div>
+        <div id="userList"></div></section>
+
+      <section class="panel sec" data-sec="roles" id="rolesSec">
+        <div class="p-h"><h2>Privileges<span class="kh">សិទ្ធិ</span></h2><span class="note">What each group of users is allowed to do.</span>
+          <div class="act"><button class="btn" type="button" id="addRole">${ic('plus',15)} Add privilege</button></div></div>
+        <div class="roles"><div class="role-list" id="roleList"></div><div class="role-edit" id="roleEdit"></div></div></section>
+
+      <section class="panel sec" data-sec="account">
+        <div class="p-h"><h2>My account<span class="kh">គណនីរបស់ខ្ញុំ</span></h2></div>
+        <div class="acct">
+          <div class="avatar lg">${esc(initials(ME?.name))}</div>
+          <div class="acct-info"><b>${esc(ME?.name || '')}</b><span>User ID ${esc(ME?.uid || '')}</span>
+            <span class="badge plain t-ink">${esc(roleOf(ME)?.name || '')}</span><span class="sub">Stores: ${allStores(ME) ? 'All stores' : esc((ME?.outlets || []).join(', '))}</span></div>
+          <div class="acct-act">${can('pin.self') ? '' : '<span class="sub" style="align-self:center">To change your PIN, ask a General Manager.</span>'}<button class="btn" type="button" id="myPin">${ic('key',15)} Change my PIN</button><button class="btn" type="button" id="signOut2">Sign out</button></div>
+        </div></section>
+
+      <section class="panel sec" data-sec="data">
+        <div class="p-h"><h2>Backup &amp; data<span class="kh">ទិន្នន័យ</span></h2></div>
+        <div class="set-grid" id="backupSec"><div><h3>Backup</h3><p>${MODE === 'local' ? 'Your data is saved only in this browser. Download a backup every week.' : 'Download a copy of all data, or restore from a backup file.'}</p></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start">
+            <button class="btn" id="bkDl">${ic('dl',15)} Download backup</button>
+            <label class="btn" style="cursor:pointer" id="bkUpLbl">${ic('ul',15)} Restore from backup<input type="file" id="bkUp" accept=".json,application/json" hidden></label>
+            <span class="sub" style="flex-basis:100%">${plural(S.ng.size,'Not Good line')}, ${plural(S.good.size,'good stock line')}, ${plural(S.suppliers.size,'supplier')}, ${plural(S.users.size,'user')}</span></div></div>
+        ${FS ? `<div class="set-grid" id="devSec"><div><h3>This device</h3><p>Connected to Firebase as <b>${esc(acctName(firebase.auth().currentUser?.email))}</b>. Every connected device sees the same data, live.</p></div>
+          <div>${ME?.role === 'gm' ? `<button class="btn" type="button" id="devOut">${ic('lock',15)} Disconnect this device</button>` : '<span class="sub">Only a General Manager can disconnect a device.</span>'}</div></div>` : ''}
+        <div class="set-grid" id="excelSec"><div><h3>Excel master list</h3><p>Export to the same layout as the Excel master list, or import lines from it. Columns are matched by their headers.</p></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start">
+            <button class="btn" type="button" id="xlExp">${ic('dl',15)} Export to Excel</button>
+            <label class="btn" style="cursor:pointer" id="xlImpLbl">${ic('ul',15)} Import from Excel<input type="file" id="xlImp" accept=".xlsx,.xls,.xlsm" hidden></label>
+            <span class="sub" style="flex-basis:100%">Import reads the <b>Master_List</b> and <b>Suppliers</b> sheets. Lines already in the app are skipped.</span></div></div>
+        <div class="set-grid" id="wipeSec"><div><h3 style="color:#B42318">Delete all data</h3><p>Removes every line, supplier, user and setting. Download a backup first.</p></div>
+          <div><button class="btn soft t-ng" id="wipe">${ic('trash',15)} Delete all data</button></div></div></section>
+    </div>
+  </div>`; },
+  refresh() {
+    const vis = SECS.filter(x => x[3]());
+    if (!vis.some(x => x[0] === setSec)) setSec = vis[0]?.[0] || 'account';
+    $('#setNav').innerHTML = vis.map(([k, l, i]) => `<button type="button" class="${k === setSec ? 'on' : ''}" data-secbtn="${k}">${ic(i, 17)}<span>${l}</span></button>`).join('');
+    document.querySelectorAll('#view .sec').forEach(el => el.classList.toggle('off', el.dataset.sec !== setSec));
+    $('#userList').innerHTML = userTable();
+    $('#userCount').textContent = plural(visibleUsers().filter(u => u.status !== 'inactive').length, 'active user');
+    if (setSec === 'roles' && !(roleDraft && document.activeElement?.closest('#roleEdit'))) this.renderRoles();
+  },
+  renderRoles() {
+    const rs = roles();
+    if (!selRole || !rs.some(r => r.id === selRole)) { selRole = rs[0]?.id; roleDraft = null; }
+    const cur = rs.find(r => r.id === selRole);
+    if (!roleDraft || roleDraft.id !== selRole) roleDraft = clone(cur);
+    const users = id => [...S.users.values()].filter(u => u.role === id && u.status !== 'inactive');
+    const nPerm = r => r.locked ? PERMS.length : (r.perms || []).length;
+    $('#roleList').innerHTML = rs.map(r => `<button type="button" class="role-item ${r.id === selRole ? 'on' : ''}" data-role="${r.id}">
+        <span class="ri-top"><b>${esc(r.id === selRole ? roleDraft.name || r.name : r.name)}</b>${r.locked ? `<span class="lock" title="Built in, always has every permission">${ic('lock',13)}</span>` : ''}</span>
+        <span class="ri-sub">${plural(users(r.id).length,'user')}</span>
+        <span class="meter"><span style="width:${Math.round(nPerm(r) / PERMS.length * 100)}%"></span></span>
+        <span class="ri-sub">${nPerm(r)} of ${PERMS.length} permissions</span></button>`).join('');
+    const d = roleDraft, locked = !!d.locked, us = users(d.id), dirty = !locked && JSON.stringify({ n: d.name, p: [...(d.perms || [])].sort() }) !== JSON.stringify({ n: cur.name, p: [...(cur.perms || [])].sort() });
+    $('#roleEdit').innerHTML = `
+      <div class="re-head">
+        <label class="f" style="flex:1">Privilege name<input id="reName" value="${esc(d.name)}" ${locked ? 'readonly' : ''}></label>
+        ${!locked ? `<button type="button" class="btn ghost" id="reDel" ${us.length ? 'disabled title="Move its users to another privilege first"' : ''}>${ic('trash',15)} Delete</button>` : ''}
+      </div>
+      ${locked ? `<div class="info t-ink" style="margin:0 0 6px">${ic('lock',14)} General Manager is built in and always has every permission, so nobody can lock the company out.</div>` : ''}
+      <div class="re-users">${us.length ? `Used by ${us.map(u => `<span class="uchip"><span class="avatar sm">${esc(initials(u.name))}</span>${esc(u.name)}</span>`).join('')}` : '<span class="sub">No users have this privilege yet.</span>'}</div>
+      ${PGROUPS.map(([gname, tone, keys]) => { const on = keys.filter(k => locked || (d.perms || []).includes(k)).length;
+        return `<div class="pg ${tone}"><div class="pg-h"><span class="pg-dot"></span><b>${gname}</b><span class="sub">${on} of ${keys.length}</span>
+          ${!locked ? `<button type="button" class="btn sm ghost" data-pgall="${keys.join(',')}">${on === keys.length ? 'Turn all off' : 'Turn all on'}</button>` : ''}</div>
+          ${keys.map(k => { const p = PERMS.find(x => x[0] === k), chk = locked || (d.perms || []).includes(k);
+            return `<label class="prow ${chk ? 'is-on' : ''}"><span class="ptx"><b>${p[1]}</b><span>${p[2]}</span></span>
+              <span class="switch"><input type="checkbox" data-pk="${k}" ${chk ? 'checked' : ''} ${locked ? 'disabled' : ''} aria-label="${esc(p[1])}"><span></span></span></label>`; }).join('')}</div>`; }).join('')}
+      ${!locked ? `<div class="re-foot"><span class="sub">${dirty ? '<span class="warn">Unsaved changes</span>' : 'All changes saved'}</span>
+        <button type="button" class="btn" id="reCancel" ${dirty ? '' : 'disabled'}>Cancel</button><button type="button" class="btn solid t-ink" id="reSave" ${dirty ? '' : 'disabled'}>Save privilege</button></div>` : ''}`;
+  },
+  init() {
+    $('#setNav').onclick = e => { const b = e.target.closest('[data-secbtn]'); if (!b) return; setSec = b.dataset.secbtn; this.refresh(); applyPerms(); };
+    const saveCfg = async (patch, msg) => { if (guard()) return; await put('settings', { ...clone(cfg()), id: 'app', ...patch }); toast(msg); };
+    $('#fCompany').onsubmit = e => { e.preventDefault(); if (!can('set.company')) return; saveCfg({ company: e.target.company.value.trim() }, 'Company name saved'); };
+    $('#fBranches').onsubmit = e => { e.preventDefault(); if (!can('set.branches')) return;
+      const branches = [...new Set(e.target.branches.value.split(',').map(x => x.trim()).filter(Boolean))];
+      if (!branches.length) return toast('Enter at least one branch', 1);
+      saveCfg({ branches }, 'Branches saved'); };
+    $('#fLimits').onsubmit = e => { e.preventDefault(); if (!can('set.limits')) return;
+      const d = Object.fromEntries(new FormData(e.target)); saveCfg({ ageWH: +d.ageWH, ageSup: +d.ageSup, ageCN: +d.ageCN, ageGood: +d.ageGood, ageRej: +d.ageRej }, 'Alert limits saved'); };
+    $('#myPin').onclick = changeMyPin; $('#signOut2').onclick = () => signOut();
+    $('#addUser').onclick = () => editUser(); $('#addRole').onclick = addRole;
+    $('#userList').onclick = e => { const b = e.target.closest('[data-u]'); if (b) editUser(S.users.get(b.dataset.u)); };
+    $('#roleList').onclick = e => { const b = e.target.closest('[data-role]'); if (!b) return;
+      const go2 = () => { selRole = b.dataset.role; roleDraft = null; this.renderRoles(); };
+      if ($('#reSave') && !$('#reSave').disabled) confirmBox('Discard changes?', 'You have unsaved changes to this privilege.', 'Discard', 't-ng', go2); else go2(); };
+    const re = $('#roleEdit');
+    re.addEventListener('change', e => { const k = e.target.dataset.pk; if (!k) return;
+      const set = new Set(roleDraft.perms || []); e.target.checked ? set.add(k) : set.delete(k); roleDraft.perms = PERMS.map(p => p[0]).filter(x => set.has(x)); this.renderRoles(); });
+    re.addEventListener('input', e => { if (e.target.id !== 'reName') return; roleDraft.name = e.target.value;
+      const dirty = true; const f = $('#reSave'); if (f) { f.disabled = !e.target.value.trim(); $('#reCancel').disabled = false; re.querySelector('.re-foot .sub').innerHTML = '<span class="warn">Unsaved changes</span>'; }
+      const li = document.querySelector(`.role-item[data-role="${roleDraft.id}"] b`); if (li) li.textContent = e.target.value || '…'; });
+    re.addEventListener('click', async e => {
+      const all = e.target.closest('[data-pgall]');
+      if (all) { const keys = all.dataset.pgall.split(','), set = new Set(roleDraft.perms || []), allOn = keys.every(k => set.has(k));
+        keys.forEach(k => allOn ? set.delete(k) : set.add(k)); roleDraft.perms = PERMS.map(p => p[0]).filter(x => set.has(x)); return this.renderRoles(); }
+      if (e.target.closest('#reCancel')) { roleDraft = null; return this.renderRoles(); }
+      if (e.target.closest('#reSave')) {
+        const name = roleDraft.name.trim(); if (!name) return toast('Enter a privilege name', 1);
+        if (roles().some(r => r.id !== roleDraft.id && r.name.toLowerCase() === name.toLowerCase())) return toast('Another privilege already has this name', 1);
+        if (!S.roles.size) for (let i = 0; i < DEFAULT_ROLES.length; i++) await put('roles', { ...clone(DEFAULT_ROLES[i]), order: i, v: 3 });
+        await put('roles', { ...clone(roleDraft), name, v: 3 }); roleDraft = null; this.renderRoles(); toast(`Privilege ${esc(name)} saved`); return;
+      }
+      if (e.target.closest('#reDel')) delRole(roleDraft.id);
+    });
+    $('#bkDl').onclick = () => {
+      if (!can('backup')) return toast('Your privilege does not allow downloading backups.', 1);
+      const o = { app: 'returns-control', version: 1, exportedAt: new Date().toISOString() }; for (const k in S) o[k] = [...S[k].values()];
+      download(`backup-${company().replace(/\W+/g,'-').toLowerCase()}-${today()}.json`, JSON.stringify(o, null, 1), 'application/json');
+    };
+    $('#bkUp').onchange = async e => {
+      const file = e.target.files[0]; e.target.value = ''; if (!file || guard()) return;
+      if (!can('adm.restore')) return toast('Your privilege does not allow restoring backups.', 1);
+      let o; try { o = JSON.parse(await file.text()); } catch { return toast('This file is not a valid backup', 1); }
+      if (!o || !Array.isArray(o.ng)) return toast('This file is not a backup from this app', 1);
+      const n = k => Array.isArray(o[k]) ? o[k].filter(r => r && r.id).length : 0;
+      modal({ title: 'Restore from backup', tone: 't-ink', ok: 'Restore',
+        sub: `${esc(file.name)}${o.exportedAt ? `, made ${fmtD(o.exportedAt.slice(0,10))}` : ''}`,
+        body: `<p style="margin:0">This adds ${n('ng')} Not Good lines, ${n('good')} good stock lines and ${n('suppliers')} suppliers. Lines with the same ID are replaced by the backup copy.</p>`,
+        onOk: async () => { await restoreBackup(o); toast('Backup restored'); go('settings'); } });
+    };
+    $('#xlExp').onclick = exportExcel;
+    $('#devOut') && ($('#devOut').onclick = () => confirmBox('Disconnect this device?', 'The app on this device closes. Nobody can open it here again until the company account signs in.', 'Disconnect', 't-ng',
+      async () => { ssSet('rc_uid', null); await firebase.auth().signOut(); }));
+    $('#xlImp').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) importExcel(f); };
+    $('#wipe').onclick = () => { if (guard()) return; if (!can('adm.wipe')) return toast('Your privilege does not allow this.', 1);
+      const f = modal({ title: 'Delete all data?', tone: 't-ng', ok: 'Delete everything', okDisabled: true,
+        sub: 'Every line, supplier and setting will be removed. This cannot be undone.',
+        body: `<label class="f">Type DELETE to confirm<input name="c" autocomplete="off"></label>`,
+        onOk: async () => {
+          await removeMany(Object.keys(S).flatMap(k => [...S[k].keys()].map(id => [k, id]))); toast('All data deleted'); go('dash');
+        } });
+      f.c.addEventListener('input', () => f.querySelector('.mdl-f .solid').disabled = f.c.value.trim() !== 'DELETE');
+    };
+  }
+};
+
+/* ================= backup restore (Settings, or the first screen of an empty database) ================= */
+const isBackup = o => !!o && Array.isArray(o.ng);
+async function restoreBackup(o) {
+  const list = [];
+  for (const k of Object.keys(S)) for (const r of (Array.isArray(o[k]) ? o[k] : [])) if (r && r.id) list.push([k, r]);
+  await putMany(list);
+}
+
+/* ================= sign in / users / privileges ================= */
+let authReady = false, failCount = 0, lockUntil = 0;
+function showAuth(mode) {
+  const el = $('#auth'); el.hidden = false; const name = company();
+  const mark = `<div class="mark">${esc(name.split(/\s+/).filter(Boolean).slice(0,2).map(w => w[0]).join('').toUpperCase() || 'RC')}</div>`;
+  if (mode === 'loading') { el.innerHTML = `<div class="auth-card">${mark}<h1>${esc(name)}</h1><p>Loading data…</p></div>`; return; }
+  const users = [...S.users.values()].filter(u => u.status !== 'inactive').sort((a,b) => a.name.localeCompare(b.name));
+  if (!S.users.size) {
+    el.innerHTML = `<div class="auth-card">${mark}<h1>Create the first account</h1><p>This account is the General Manager. It can add other users and set their privileges.</p>
+      <form id="setupF" autocomplete="off">
+        <label class="f">Company name<input name="co" value="${esc(name)}" required></label>
+        <label class="f">Your name<input name="name" required></label>
+        <label class="f">User ID<input name="uid" required placeholder="e.g. sengpheng" pattern="[A-Za-z0-9._\\-]{3,20}" title="3–20 letters or numbers"></label>
+        <label class="f">PIN (4–6 digits)<input name="pin" type="password" inputmode="numeric" pattern="\\d{4,6}" class="pinbox" required></label>
+        <label class="f">Confirm PIN<input name="pin2" type="password" inputmode="numeric" pattern="\\d{4,6}" class="pinbox" required></label>
+        <button class="btn solid t-ink">Create account and start</button></form>
+      <div class="auth-alt"><span class="sub">Moving data from another computer? Load its backup file instead. Users and PINs come with it.</span>
+        <label class="btn" style="cursor:pointer">${ic('ul',15)} Restore from a backup file<input type="file" id="setupBk" accept=".json,application/json" hidden></label></div></div>`;
+    $('#setupBk').onchange = async e => {
+      const file = e.target.files[0]; e.target.value = ''; if (!file || S.users.size) return;
+      let o; try { o = JSON.parse(await file.text()); } catch { return toast('This file is not a valid backup', 1); }
+      if (!isBackup(o)) return toast('This file is not a backup from this app', 1);
+      await restoreBackup(o); toast(`Backup restored: ${plural(o.ng.length, 'Not Good line')}. Sign in with your user and PIN.`); showAuth();
+    };
+    $('#setupF').onsubmit = async e => {
+      e.preventDefault(); const d = Object.fromEntries(new FormData(e.target));
+      if (d.pin !== d.pin2) return toast('The two PINs are different', 1);
+      for (let i = 0; i < DEFAULT_ROLES.length; i++) await put('roles', { ...clone(DEFAULT_ROLES[i]), order: i, v: 3 });
+      if (d.co.trim() !== cfg().company) await put('settings', { ...clone(cfg()), id: 'app', company: d.co.trim() });
+      const id = uid();
+      await put('users', { id, uid: d.uid.trim().toLowerCase(), name: d.name.trim(), role: 'gm', outlets: ['ALL'], status: 'active', pin: await hashPin(d.pin, id), createdAt: Date.now() });
+      signIn(S.users.get(id));
+    };
+    return;
+  }
+  el.innerHTML = `<div class="auth-card">${mark}<h1>${esc(name)}</h1><p>Returns &amp; replacement control. Sign in to continue.</p>
+    <form id="loginF" autocomplete="off">
+      <label class="f">User<select name="u" required>${users.map(u => `<option value="${u.id}" ${u.id === lsGet('rc_last','') ? 'selected' : ''}>${esc(u.name)} (${esc(u.uid)})</option>`).join('')}</select></label>
+      <label class="f">PIN<input name="pin" type="password" inputmode="numeric" class="pinbox" required autofocus></label>
+      <button class="btn solid t-ink">Sign in</button>
+      <span class="sub">Forgot your PIN? Ask a General Manager to set a new one.</span></form></div>`;
+  setTimeout(() => $('#loginF [name=pin]')?.focus(), 50);
+  $('#loginF').onsubmit = async e => {
+    e.preventDefault();
+    if (Date.now() < lockUntil) return toast(`Too many wrong PINs. Wait ${Math.ceil((lockUntil - Date.now()) / 1000)} seconds.`, 1);
+    const d = Object.fromEntries(new FormData(e.target)); const u = S.users.get(d.u);
+    if (u && u.status !== 'inactive' && u.pin === await hashPin(d.pin, u.id)) { failCount = 0; signIn(u); }
+    else { failCount++; if (failCount >= 5) { lockUntil = Date.now() + 30000; failCount = 0; } e.target.pin.value = ''; toast('Wrong PIN', 1); }
+  };
+}
+function signIn(u) {
+  ME = u; ssSet('rc_uid', u.id); lsSet('rc_last', u.id);
+  $('#auth').hidden = true; $('#auth').innerHTML = '';
+  go(tab); toast(`Signed in as ${esc(u.name)}`);
+}
+function signOut(msg) {
+  closeUM();
+  ME = null; ssSet('rc_uid', null); $('#ov').classList.remove('on'); $('#ov').innerHTML = '';
+  showAuth(); if (msg) toast(msg, 1);
+}
+function startAuth() {
+  if (authReady) return; authReady = true;
+  const u = S.users.get(ssGet('rc_uid'));
+  if (u && u.status !== 'inactive') { ME = u; $('#auth').hidden = true; go(tab); } else showAuth();
+}
+function changeMyPin() {
+  if (!can('pin.self')) return toast('Your privilege does not allow changing your PIN. Ask a General Manager.', 1);
+  modal({ title: 'Change my PIN', ok: 'Save PIN', body: `<div class="fg">
+      <label class="f s2">Current PIN<input name="old" type="password" inputmode="numeric" class="pinbox" required></label>
+      <label class="f">New PIN (4–6 digits)<input name="pin" type="password" inputmode="numeric" pattern="\\d{4,6}" class="pinbox" required></label>
+      <label class="f">Confirm new PIN<input name="pin2" type="password" inputmode="numeric" pattern="\\d{4,6}" class="pinbox" required></label></div>`,
+    onOk: async d => {
+      if (ME.pin !== await hashPin(d.old, ME.id)) { toast('Current PIN is wrong', 1); return false; }
+      if (d.pin !== d.pin2) { toast('The two new PINs are different', 1); return false; }
+      await put('users', { ...clone(ME), pin: await hashPin(d.pin, ME.id) }); toast('PIN changed');
+    } });
+}
+const gmCount = () => [...S.users.values()].filter(u => u.role === 'gm' && u.status !== 'inactive').length;
+const initials = n => String(n || '?').split(/\s+/).filter(Boolean).slice(0,2).map(w => w[0]).join('').toUpperCase();
+const PGROUPS = [
+  ['Not Good stock', 't-ng', ['ng.add','ng.edit','ng.return']],
+  ['Supplier settlement', 't-sup', ['sup.settle','cn.deduct','disp.mark']],
+  ['Good stock', 't-good', ['good.receive','good.send']],
+  ['Corrections and data', 't-bl', ['ng.delete','undo','export','backup']],
+  ['Settings', 't-tl', SET_KEYS],
+  ['Administration', 't-ink', [...ADM_KEYS, 'pin.self']],
+];
+const visibleUsers = () => [...S.users.values()].filter(u => ME?.role === 'gm' || u.role !== 'gm');
+function userTable() {
+  const us = visibleUsers().sort((a,b) => (a.status === 'inactive') - (b.status === 'inactive') || a.name.localeCompare(b.name));
+  return `<div class="tw"><table><thead><tr><th>User</th><th>Privilege</th><th>Stores</th><th>Status</th><th></th></tr></thead><tbody>
+    ${us.map(u => `<tr class="${u.status === 'inactive' ? 'dim' : ''}"><td><div class="ucell"><span class="avatar">${esc(initials(u.name))}</span><span><b>${esc(u.name)}</b>${u.id === ME?.id ? ' <span class="sub">(you)</span>' : ''}<span class="sub" style="display:block">${esc(u.uid)}</span></span></div></td>
+      <td><span class="badge plain t-ink">${esc(roleOf(u)?.name || u.role)}</span></td>
+      <td>${allStores(u) ? '<span class="sub">All stores</span>' : (u.outlets || []).map(o => `<span class="badge plain t-tl" style="margin:2px 4px 2px 0">${esc(o)}</span>`).join('')}</td>
+      <td>${u.status === 'inactive' ? '<span class="badge t-disp">Inactive</span>' : '<span class="badge t-good">Active</span>'}</td>
+      <td class="r"><button class="btn sm" type="button" data-u="${u.id}">${ic('edit',14)} Edit</button></td></tr>`).join('')}</tbody></table></div>`;
+}
+function editUser(u) {
+  if (!can('adm.users')) return toast('Your privilege does not allow managing users.', 1);
+  if (u && u.role === 'gm' && ME.role !== 'gm') return toast('Only a General Manager can edit a General Manager.', 1);
+  const isNew = !u; u = u || { role: 'wh', outlets: ['ALL'], status: 'active' };
+  const all = (u.outlets || []).includes('ALL');
+  const pinLocked = !isNew && u.id === ME?.id && !can('pin.self');
+  const f = modal({ title: isNew ? 'Add user' : 'Edit user', ok: isNew ? 'Add user' : 'Save user',
+    body: `<div class="fg">
+      <label class="f">Name<input name="name" value="${esc(u.name || '')}" required></label>
+      <label class="f">User ID<input name="uid" value="${esc(u.uid || '')}" required pattern="[A-Za-z0-9._\\-]{3,20}" title="3–20 letters or numbers" ${isNew ? '' : 'readonly style="background:#F4F5F7"'}></label>
+      <label class="f">Privilege<select name="role" ${u.id === ME?.id && ME.role !== 'gm' ? 'disabled' : ''}>${roles().filter(r => ME.role === 'gm' || r.id !== 'gm').map(r => `<option value="${r.id}" ${r.id === u.role ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select></label>
+      <label class="f">Status<select name="status"><option value="active">Active</option><option value="inactive" ${u.status === 'inactive' ? 'selected' : ''}>Inactive (cannot sign in)</option></select></label>
+      <div class="f s2" style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;font-weight:500;color:var(--ink2)">Stores this user can see
+        <div class="store-pick"><label><input type="checkbox" name="st_ALL" ${all ? 'checked' : ''}> All stores</label>
+          ${BR().map(b => `<label><input type="checkbox" name="st_${esc(b)}" ${!all && (u.outlets || []).includes(b) ? 'checked' : ''}> ${esc(b)}</label>`).join('')}</div></div>
+      ${pinLocked ? `<div class="f s2 sub" style="font-weight:400">To change your own PIN, ask a General Manager.</div>` : `<label class="f">${isNew ? 'PIN (4–6 digits)' : 'New PIN'}<input name="pin" type="password" inputmode="numeric" pattern="\\d{4,6}" class="pinbox" ${isNew ? 'required' : 'placeholder="Leave empty to keep the PIN"'}></label>
+      <label class="f">Confirm PIN<input name="pin2" type="password" inputmode="numeric" pattern="\\d{4,6}" class="pinbox" ${isNew ? 'required' : ''}></label>`}</div>
+      <div class="info t-ink">${PERMS.filter(p => (roleOf({ role: u.role })?.perms || []).includes(p[0]) || u.role === 'gm').map(p => p[1]).join(', ') || 'View only'}</div>`,
+    onOk: async d => {
+      if (!d.role) d.role = u.role;   // privilege box locked for own account
+      if (d.role === 'gm' && ME.role !== 'gm') { toast('Only a General Manager can give the General Manager privilege.', 1); return false; }
+      const outlets = d.st_ALL ? ['ALL'] : BR().filter(b => d['st_' + b]);
+      if (!outlets.length) { toast('Choose at least one store', 1); return false; }
+      if (pinLocked) { d.pin = ''; d.pin2 = ''; }
+      if ((d.pin || '') !== (d.pin2 || '')) { toast('The two PINs are different', 1); return false; }
+      const id2 = d.uid.trim().toLowerCase();
+      if (isNew && [...S.users.values()].some(x => x.uid === id2)) { toast('This user ID is already used', 1); return false; }
+      if (!isNew && u.role === 'gm' && u.status !== 'inactive' && (d.role !== 'gm' || d.status === 'inactive') && gmCount() <= 1) { toast('Keep at least one active General Manager', 1); return false; }
+      const rec = isNew ? { id: uid(), uid: id2, createdAt: Date.now() } : clone(u);
+      Object.assign(rec, { name: d.name.trim(), role: d.role, status: d.status, outlets });
+      if (d.pin) rec.pin = await hashPin(d.pin, rec.id);
+      await put('users', rec); toast(isNew ? `User ${esc(rec.name)} added` : `User ${esc(rec.name)} saved`);
+    } });
+  const info = () => { const r = roleOf({ role: f.role.value }); f.querySelector('.info').textContent = 'Can do: ' + (f.role.value === 'gm' ? 'everything' : (PERMS.filter(p => (r?.perms || []).includes(p[0])).map(p => p[1]).join(', ') || 'view only')); };
+  f.role.addEventListener('change', info); info();
+  f.st_ALL.addEventListener('change', () => { if (f.st_ALL.checked) f.querySelectorAll('.store-pick input:not([name=st_ALL])').forEach(x => x.checked = false); });
+  f.querySelectorAll('.store-pick input:not([name=st_ALL])').forEach(x => x.addEventListener('change', () => { if (x.checked) f.st_ALL.checked = false; }));
+}
+function addRole() {
+  modal({ title: 'Add privilege', sub: 'Start empty or copy the permissions of an existing privilege.', ok: 'Add privilege',
+    body: `<div class="fg"><label class="f s2">Privilege name<input name="n" required placeholder="e.g. Cashier"></label>
+      <label class="f s2">Start from<select name="from"><option value="">No permissions</option>${roles().map(r => `<option value="${r.id}">Copy ${esc(r.name)}</option>`).join('')}</select></label></div>`,
+    onOk: async d => {
+      const name = d.n.trim();
+      if (roles().some(r => r.name.toLowerCase() === name.toLowerCase())) { toast('Another privilege already has this name', 1); return false; }
+      if (!S.roles.size) for (let i = 0; i < DEFAULT_ROLES.length; i++) await put('roles', { ...clone(DEFAULT_ROLES[i]), order: i, v: 3 });
+      const src = roles().find(r => r.id === d.from), id = uid();
+      await put('roles', { v: 3, id, name, perms: src ? (src.locked ? PERMS.map(p => p[0]) : [...(src.perms || [])]) : [], order: roles().length });
+      selRole = id; roleDraft = null; TABS.settings.renderRoles(); toast(`Privilege ${esc(name)} added`);
+    } });
+}
+function delRole(id) {
+  const r = S.roles.get(id); if (!r) return;
+  confirmBox('Delete this privilege?', `<b>${esc(r.name)}</b> will be removed. No users have it.`, 'Delete privilege', 't-ng',
+    async () => { await remove('roles', id); selRole = null; roleDraft = null; TABS.settings.renderRoles(); toast('Privilege deleted'); });
+}
+
+/* ================= boot ================= */
+$('#setBtn').innerHTML = ic('gear', 17);
+$('#today').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+/* account menu: click your name to sign out quickly */
+let umEl = null;
+function closeUM() { if (!umEl) return; umEl.remove(); umEl = null; $('#opBtn').setAttribute('aria-expanded', 'false');
+  document.removeEventListener('mousedown', umOut, true); document.removeEventListener('keydown', umKey, true); }
+const umOut = e => { if (umEl && !umEl.contains(e.target) && !e.target.closest('#opBtn')) closeUM(); };
+const umKey = e => { if (e.key === 'Escape') { closeUM(); $('#opBtn').focus(); } };
+$('#opBtn').setAttribute('aria-haspopup', 'menu');
+$('#opBtn').onclick = () => {
+  if (!ME) return; if (umEl) return closeUM();
+  umEl = document.createElement('div'); umEl.className = 'um'; umEl.setAttribute('role', 'menu');
+  umEl.innerHTML = `<div class="um-h"><span class="avatar">${esc(initials(ME.name))}</span><span><b>${esc(ME.name)}</b><small>${esc(ME.uid)}</small></span></div>
+    <button type="button" role="menuitem" data-um="acct">${ic('user', 16)} My account</button>
+    <button type="button" role="menuitem" class="um-out" data-um="out">${ic('ul', 16).replace('<svg', '<svg style="transform:rotate(90deg)"')} Sign out</button>`;
+  document.body.appendChild(umEl);
+  const r = $('#opBtn').getBoundingClientRect();
+  umEl.style.top = (r.bottom + window.scrollY + 6) + 'px';
+  umEl.style.left = Math.max(10, r.right + window.scrollX - umEl.offsetWidth) + 'px';
+  $('#opBtn').setAttribute('aria-expanded', 'true');
+  umEl.onclick = e => { const b = e.target.closest('[data-um]'); if (!b) return; closeUM();
+    if (b.dataset.um === 'out') signOut(); else { setSec = 'account'; go('settings'); } };
+  umEl.querySelector('[data-um=out]').focus();
+  setTimeout(() => { document.addEventListener('mousedown', umOut, true); document.addEventListener('keydown', umKey, true); });
+};
+$('#modeChip').onclick = () => toast(MODE === 'local' ? 'Data is saved only in this browser. Download a backup in Settings.' : MODE === 'online' ? 'Data is shared live with everyone who opens this app.'
+  : MODE === 'offline' ? 'No internet. Keep working: changes are kept on this device and sync when the internet is back.' : $('#modeTx').textContent);
+
+/* ================= Firebase: connect the device once, then live data ================= */
+const loadJS = src => new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = src; sc.onload = ok; sc.onerror = () => no(new Error('load ' + src)); document.head.appendChild(sc); });
+const FB_ERR = { 'auth/invalid-credential': 'Account name or password is wrong.', 'auth/wrong-password': 'Account name or password is wrong.', 'auth/user-not-found': 'Account name or password is wrong.',
+  'auth/invalid-login-credentials': 'Account name or password is wrong.', 'auth/invalid-email': 'Use only letters and numbers in the account name.', 'auth/user-disabled': 'This account is turned off in Firebase.',
+  'auth/too-many-requests': 'Too many tries. Wait a few minutes, then try again.', 'auth/network-request-failed': 'No internet connection. Check it, then try again.' };
+const markHtml = () => `<div class="mark">${esc(company().split(/\s+/).filter(Boolean).slice(0,2).map(w => w[0]).join('').toUpperCase() || 'RC')}</div>`;
+/* Firebase needs an email, so a plain account name becomes name@babytown.app (no real mailbox needed) */
+const ACCT_DOMAIN = 'babytown.app';
+const acctEmail = v => { v = String(v).trim().toLowerCase(); return v.includes('@') ? v : v + '@' + ACCT_DOMAIN; };
+const acctName = e => String(e || '').replace('@' + ACCT_DOMAIN, '');
+function deviceScreen(note) {
+  note = note || ssGet('fb_note'); ssSet('fb_note', null);
+  const el = $('#auth'); el.hidden = false;
+  el.innerHTML = `<div class="auth-card">${markHtml()}<h1>Connect this device</h1>
+    <p>Sign in once with the company account name and password. After that, staff sign in with their own name and PIN.</p>
+    ${note ? `<div class="info t-ng">${note}</div>` : ''}
+    <form id="devF" autocomplete="on">
+      <label class="f">Account name<input name="em" autocomplete="username" autocapitalize="none" spellcheck="false" required placeholder="e.g. babytown"></label>
+      <label class="f">Password<input name="pw" type="password" autocomplete="current-password" required></label>
+      <button class="btn solid t-ink">Connect device</button>
+      <span class="sub">Only the General Manager enters this. The device stays connected until it is disconnected in Settings.</span></form></div>`;
+  setTimeout(() => $('#devF [name=em]')?.focus(), 50);
+  $('#devF').onsubmit = async e => {
+    e.preventDefault(); const f = e.target, b = f.querySelector('button'); b.disabled = true; b.textContent = 'Connecting…';
+    try { await firebase.auth().signInWithEmailAndPassword(acctEmail(f.em.value), f.pw.value); }
+    catch (err) { b.disabled = false; b.textContent = 'Connect device'; f.pw.value = ''; toast(FB_ERR[err.code] || `Could not connect (${esc(err.code || err.message)})`, 1); }
+  };
+}
+async function bootFirebase() {
+  setMode('connecting');
+  try { for (const m of ['app', 'auth', 'firestore']) await loadJS(FB_SDK + m + '-compat.js'); }
+  catch { setMode('error'); $('#auth').hidden = false;
+    $('#auth').innerHTML = `<div class="auth-card">${markHtml()}<h1>Cannot reach Firebase</h1><p>Check the internet connection, then reload this page.</p><button class="btn solid t-ink" onclick="location.reload()">Reload</button></div>`; return; }
+  firebase.initializeApp(FIREBASE_CONFIG);
+  FS = firebase.firestore();
+  try { FS.settings({ ignoreUndefinedProperties: true, merge: true }); } catch {}
+  try { await FS.enablePersistence({ synchronizeTabs: true }); } catch {}   /* a copy stays on this device: it opens and saves offline */
+  let started = false;
+  firebase.auth().onAuthStateChanged(u => {
+    if (u && !started) { started = true; fbLive(u); }
+    else if (!u && started) location.reload();      /* disconnected: start again at the Connect screen */
+    else if (!u) deviceScreen();
+  });
+}
+function fbLive(user) {
+  DB = FS; showAuth('loading');
+  const cols = Object.keys(S), seen = new Set(), live = new Set(); let begun = false, denied = false;
+  const begin = () => { if (begun) return; begun = true; migrateBranches(); startAuth(); };
+  const status = () => setMode(live.size === cols.length ? 'online' : 'offline');
+  const timer = setTimeout(() => { if (seen.size === cols.length) { begin(); status(); } else setMode('slow'); }, 8000);
+  for (const c of cols) FS.collection(c).onSnapshot({ includeMetadataChanges: true }, snap => {
+    const changed = !seen.has(c) || snap.docChanges().length > 0;
+    seen.add(c); snap.metadata.fromCache ? live.delete(c) : live.add(c);
+    if (changed) S[c] = new Map(snap.docs.map(d => [d.id, d.data()]));
+    if (live.size === cols.length) { clearTimeout(timer); begin(); }
+    if (begun) status();
+    if (changed) refresh();
+  }, e => {
+    clearTimeout(timer); if (denied) return;
+    if (e.code === 'permission-denied') { denied = true;
+      ssSet('fb_note', `The account <b>${esc(acctName(user.email))}</b> is not allowed to open this data. Sign in with the company account.`);
+      firebase.auth().signOut(); }
+    else { setMode('error'); toast(`Lost the connection to Firebase (${esc(e.code || '')}). Reload the page.`, 1); }
+  });
+}
+async function boot() {
+  showAuth('loading');
+  const h = location.hash.slice(1); go(TABS[h] ? h : 'dash');
+  let db = null;
+  try { if (window.claude && typeof claude.use === 'function') db = await claude.use('db'); } catch {}
+  if (!db && FB_ON) return bootFirebase();
+  if (!db) { loadLocal(); setMode('local'); await migrateBranches(); startAuth(); return; }
+  DB = db; setMode('connecting');
+  const ready = new Set(), cols = Object.keys(S);
+  const timer = setTimeout(() => { if (ready.size < cols.length) setMode('slow'); }, 10000);
+  for (const c of cols) {
+    db.collection(c).onSnapshot(snap => {
+      S[c] = new Map(snap.docs.map(d => [d.id, d.data()]));
+      if (!snap.metadata.fromCache) { ready.add(c); if (ready.size === cols.length) { clearTimeout(timer); if (!readOnly) { setMode('online'); } migrateBranches(); startAuth(); } }
+      refresh();
+    }, e => { clearTimeout(timer); setMode(e.code === 'revoked' ? 'readonly' : 'error'); });
+  }
+}
+boot();
+</script>
+</body>
+</html>
