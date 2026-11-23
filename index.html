@@ -536,6 +536,8 @@ const FIREBASE_CONFIG = {
 const FB_ON = !!(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId);
 const FB_SDK = 'https://www.gstatic.com/firebasejs/10.14.1/firebase-';
 let FS = null;   /* Firestore, when connected */
+/* copies of the libraries kept next to index.html (folder lib/), so the app does not depend on outside websites */
+const LIB = 'lib/';
 
 /* ================= data ================= */
 const S = { ng: new Map(), good: new Map(), suppliers: new Map(), settings: new Map(), users: new Map(), roles: new Map() };
@@ -628,13 +630,13 @@ function saveLocal() { const o = {}; for (const k in S) o[k] = [...S[k].values()
 async function put(col, rec) {
   rec.updatedAt = Date.now(); if (ME && col !== 'users') rec.updatedBy = ME.name; S[col].set(rec.id, rec); refresh();
   if (!DB) return saveLocal();
-  if (FS) { FS.collection(col).doc(rec.id).set(rec).catch(writeErr); return; }
+  if (FS) { FS.collection(col).doc(rec.id).set(rec).catch(writeErr); unarchive([[col, rec.id]]); return; }
   try { await DB.collection(col).doc(rec.id).set(rec); } catch (e) { writeErr(e); }
 }
 async function remove(col, id) {
   S[col].delete(id); refresh();
   if (!DB) return saveLocal();
-  if (FS) { FS.collection(col).doc(id).delete().catch(writeErr); return; }
+  if (FS) { unarchive([[col, id]]); FS.collection(col).doc(id).delete().catch(writeErr); return; }
   try { await DB.collection(col).doc(id).delete(); } catch (e) { writeErr(e); }
 }
 /* many records at once (restore, import, delete all): one screen update, Firebase writes in batches */
@@ -643,13 +645,72 @@ async function putMany(list) {
   if (!FS) { for (const [c, r] of list) await put(c, r); return; }
   list.forEach(([c, r]) => S[c].set(r.id, r)); refresh();
   for (let i = 0; i < list.length; i += 400) { const b = FS.batch(); list.slice(i, i + 400).forEach(([c, r]) => b.set(FS.collection(c).doc(r.id), r)); b.commit().catch(writeErr); }
+  unarchive(list.map(([c, r]) => [c, r.id]));
 }
 async function removeMany(list) {
   if (!DB) { list.forEach(([c, id]) => S[c].delete(id)); saveLocal(); refresh(); return; }
   if (!FS) { for (const [c, id] of list) await remove(c, id); return; }
+  unarchive(list);
   list.forEach(([c, id]) => S[c].delete(id)); refresh();
   for (let i = 0; i < list.length; i += 400) { const b = FS.batch(); list.slice(i, i + 400).forEach(([c, id]) => b.delete(FS.collection(c).doc(id))); b.commit().catch(writeErr); }
 }
+/* ================= archive (Firebase only) =================
+   Finished lines older than 90 days are packed many-to-one into "archive" documents.
+   Every device reads the whole list each time it opens the app, and the free Firebase plan allows
+   50,000 reads a day; packing keeps that small for years. Archived lines still show everywhere as usual,
+   and change back to normal lines if someone edits or undoes them. */
+const ARC_COLS = ['ng', 'good'], ARC_DAYS = 90, ARC_MAX = 700000;
+const LIVE = { ng: new Map(), good: new Map() };
+let ARCB = new Map();                 /* bundle id -> { id, ng:[], good:[] } */
+const ARCOF = new Map();              /* 'ng:id' -> bundle id */
+function compose(c) { const m = new Map(); for (const b of ARCB.values()) for (const r of (b[c] || [])) m.set(r.id, r); for (const [k, r] of LIVE[c]) m.set(k, r); S[c] = m; }
+function setBundles(docs) {
+  ARCB = new Map(docs.map(d => [d.id, d])); ARCOF.clear();
+  for (const b of ARCB.values()) for (const c of ARC_COLS) for (const r of (b[c] || [])) ARCOF.set(c + ':' + r.id, b.id);
+  ARC_COLS.forEach(compose);
+}
+function unarchive(pairs) {
+  if (!FS) return; const touched = new Map();
+  for (const [c, id] of pairs) { const bid = ARCOF.get(c + ':' + id); if (!bid) continue;
+    const b = touched.get(bid) || { ...ARCB.get(bid), ng: [...(ARCB.get(bid).ng || [])], good: [...(ARCB.get(bid).good || [])] };
+    b[c] = b[c].filter(r => r.id !== id); touched.set(bid, b); ARCOF.delete(c + ':' + id); }
+  for (const b of touched.values()) { ARCB.set(b.id, b);
+    (b.ng.length || b.good.length ? FS.collection('archive').doc(b.id).set(b) : FS.collection('archive').doc(b.id).delete()).catch(writeErr); }
+}
+const FINAL = new Set(['DONE', 'DED', 'DISP']);
+async function runArchive(force) {
+  if (!FS || ME?.role !== 'gm' || readOnly) return 0;
+  if (!force && Date.now() - (+lsGet('arcLast', 0) || 0) < 864e5) return 0;
+  lsSet('arcLast', Date.now());
+  const cut = Date.now() - ARC_DAYS * 864e5, old = x => (x.updatedAt || x.createdAt || 0) < cut;
+  const ngs = [...LIVE.ng.values()].filter(r => old(r) && stKey(r).every(k => FINAL.has(k)));
+  const goods = new Map();
+  const okNg = ngs.filter(r => { if (!r.goodId) return true; const g = S.good.get(r.goodId); if (!g) return true;
+    if (!old(g) || goodBal(g) > 0) return false; if (LIVE.good.has(g.id)) goods.set(g.id, g); return true; });
+  const okSet = new Set(okNg.map(r => r.id));
+  const liveRefs = new Set([...LIVE.ng.values()].filter(r => !okSet.has(r.id)).map(r => r.goodId).filter(Boolean));
+  for (const g of LIVE.good.values()) if (!goods.has(g.id) && !liveRefs.has(g.id) && old(g) && goodBal(g) <= 0) goods.set(g.id, g);
+  const items = [...okNg.map(r => ['ng', r]), ...[...goods.values()].map(g => ['good', g])];
+  if (items.length < (force ? 1 : 20)) return 0;
+  /* pack into the newest bundle that still has room, then new ones */
+  const work = new Map([...ARCB].map(([k, b]) => [k, { ...b, ng: [...(b.ng || [])], good: [...(b.good || [])] }]));
+  for (const [c, r] of items) { const bid = ARCOF.get(c + ':' + r.id); if (bid && work.has(bid)) work.get(bid)[c] = work.get(bid)[c].filter(x => x.id !== r.id); }
+  const enc = new TextEncoder(), size = x => enc.encode(JSON.stringify(x)).length, changed = new Set();   /* bytes: Khmer letters take 3 */
+  let cur = [...work.values()].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)).pop(), curSz = cur ? size(cur) : 0;
+  if (!cur || curSz > ARC_MAX * 0.9) cur = null;
+  let n = 0;
+  for (const [c, r] of items) {
+    const js = size(r) + 2;
+    if (!cur || curSz + js > ARC_MAX) { cur = { id: 'b' + Date.now().toString(36) + (n++), createdAt: Date.now() + n, ng: [], good: [] }; work.set(cur.id, cur); curSz = 120; }
+    cur[c].push(r); curSz += js; changed.add(cur.id);
+  }
+  for (const [c, r] of items) { const bid = ARCOF.get(c + ':' + r.id); if (bid) changed.add(bid); }
+  for (const bid of changed) { const b = work.get(bid); b.updatedAt = Date.now();
+    if (b.ng.length || b.good.length) await FS.collection('archive').doc(bid).set(b); else await FS.collection('archive').doc(bid).delete(); }
+  for (let i = 0; i < items.length; i += 400) { const bt = FS.batch(); items.slice(i, i + 400).forEach(([c, r]) => bt.delete(FS.collection(c).doc(r.id))); await bt.commit(); }
+  return items.length;
+}
+
 function writeErr(e) {
   if (e?.code === 'permission-denied') { toast('This device is not allowed to save. Ask the General Manager to connect it again.', 1); return; }
   if (e?.code === 'resource-exhausted') { toast('The free daily Firebase limit is used up. Changes sync again tomorrow.', 1); return; }
@@ -902,6 +963,7 @@ TABS.dash = {
   html: () => `
   <div class="ph"><div><h1>Overview<span class="kh">ទិដ្ឋភាពរួម</span></h1>
     <p>Where every line is now, from branch to supplier and back to the store.</p></div></div>
+  <div id="bkRemind"></div>
   <section class="panel"><div class="p-h"><h2>Product flow<span class="kh">លំហូរទំនិញ</span></h2><span class="note">Select a box to open its list.</span></div>
     <div class="flow" id="flow"></div></section>
   <section class="panel"><div class="p-h"><h2>Status<span class="kh">ស្ថានភាព</span></h2><span class="note">Lines by status. Select one to see the lines.</span></div>
@@ -910,6 +972,11 @@ TABS.dash = {
     <div class="act"><button class="btn sm ghost" data-go="settings">Change limits</button></div></div><div id="alerts"></div></section>
   <section class="panel"><div class="p-h"><h2>By supplier<span class="kh">តាមអ្នកផ្គត់ផ្គង់</span></h2></div><div id="bySup"></div></section>`,
   refresh() {
+    const lastBk = +cfg().lastBackupAt || 0, bkDays = Math.floor((Date.now() - lastBk) / 864e5);
+    $('#bkRemind').innerHTML = can('backup') && S.ng.size && bkDays >= 7 ? `<div class="info t-sup" style="margin:0 0 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <span style="flex:1;min-width:240px">${lastBk ? `The last backup was <b>${plural(bkDays, 'day')} ago</b>.` : '<b>No backup has been downloaded yet.</b>'} Download one every week and keep it on Google Drive.</span>
+      <button class="btn sm solid t-sup" type="button" id="bkNow">${ic('dl',14)} Download backup</button></div>` : '';
+    $('#bkNow') && ($('#bkNow').onclick = downloadBackup);
     const ng = NG(), good = [...S.good.values()];
     const wh = ng.filter(r => r.status === 'WH'), sp = ng.filter(r => r.status === 'SUP');
     const cnP = ng.filter(r => r.cnNo && r.cnStatus !== 'deducted'), cnD = ng.filter(r => r.cnNo && r.cnStatus === 'deducted');
@@ -1538,8 +1605,9 @@ function receiveManual() {
 /* ================= Excel import / export (same layout as NG_Good_Master_List.xlsx) ================= */
 async function loadXLSX() {
   if (window.XLSX) return window.XLSX;
-  await new Promise((res, rej) => { const sc = document.createElement('script');
-    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; sc.onload = res; sc.onerror = () => rej(new Error('load')); document.head.appendChild(sc); });
+  const add = src => new Promise((res, rej) => { const sc = document.createElement('script');
+    sc.src = src; sc.onload = res; sc.onerror = () => { sc.remove(); rej(new Error('load')); }; document.head.appendChild(sc); });
+  await add(LIB + 'xlsx.full.min.js').catch(() => add('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'));
   return window.XLSX;
 }
 const xlNeed = async () => { try { return await loadXLSX(); } catch { toast('Excel tools could not load. Connect to the internet and try again.', 1); return null; } };
@@ -1767,7 +1835,7 @@ TABS.settings = {
             <button class="btn" id="bkDl">${ic('dl',15)} Download backup</button>
             <label class="btn" style="cursor:pointer" id="bkUpLbl">${ic('ul',15)} Restore from backup<input type="file" id="bkUp" accept=".json,application/json" hidden></label>
             <span class="sub" style="flex-basis:100%">${plural(S.ng.size,'Not Good line')}, ${plural(S.good.size,'good stock line')}, ${plural(S.suppliers.size,'supplier')}, ${plural(S.users.size,'user')}</span></div></div>
-        ${FS ? `<div class="set-grid" id="devSec"><div><h3>This device</h3><p>Connected to Firebase as <b>${esc(acctName(firebase.auth().currentUser?.email))}</b>. Every connected device sees the same data, live.</p></div>
+        ${FS ? `<div class="set-grid" id="devSec"><div><h3>This device</h3><p>Connected to Firebase as <b>${esc(acctName(firebase.auth().currentUser?.email))}</b>. Every connected device sees the same data, live.${ARCOF.size ? ` ${plural(ARCOF.size, 'finished record')} older than ${ARC_DAYS} days ${ARCOF.size === 1 ? 'is' : 'are'} packed into ${plural(ARCB.size, 'archive page')} to stay inside the free Firebase limits.` : ''}</p></div>
           <div>${ME?.role === 'gm' ? `<button class="btn" type="button" id="devOut">${ic('lock',15)} Disconnect this device</button>` : '<span class="sub">Only a General Manager can disconnect a device.</span>'}</div></div>` : ''}
         <div class="set-grid" id="excelSec"><div><h3>Excel master list</h3><p>Export to the same layout as the Excel master list, or import lines from it. Columns are matched by their headers.</p></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start">
@@ -1851,11 +1919,7 @@ TABS.settings = {
       }
       if (e.target.closest('#reDel')) delRole(roleDraft.id);
     });
-    $('#bkDl').onclick = () => {
-      if (!can('backup')) return toast('Your privilege does not allow downloading backups.', 1);
-      const o = { app: 'returns-control', version: 1, exportedAt: new Date().toISOString() }; for (const k in S) o[k] = [...S[k].values()];
-      download(`backup-${company().replace(/\W+/g,'-').toLowerCase()}-${today()}.json`, JSON.stringify(o, null, 1), 'application/json');
-    };
+    $('#bkDl').onclick = downloadBackup;
     $('#bkUp').onchange = async e => {
       const file = e.target.files[0]; e.target.value = ''; if (!file || guard()) return;
       if (!can('adm.restore')) return toast('Your privilege does not allow restoring backups.', 1);
@@ -1883,6 +1947,12 @@ TABS.settings = {
   }
 };
 
+function downloadBackup() {
+  if (!can('backup')) return toast('Your privilege does not allow downloading backups.', 1);
+  const o = { app: 'returns-control', version: 1, exportedAt: new Date().toISOString() }; for (const k in S) o[k] = [...S[k].values()];
+  download(`backup-${company().replace(/\W+/g,'-').toLowerCase()}-${today()}.json`, JSON.stringify(o, null, 1), 'application/json');
+  if (!readOnly) put('settings', { ...clone(cfg()), id: 'app', lastBackupAt: Date.now() });
+}
 /* ================= backup restore (Settings, or the first screen of an empty database) ================= */
 const isBackup = o => !!o && Array.isArray(o.ng);
 async function restoreBackup(o) {
@@ -1944,8 +2014,9 @@ function showAuth(mode) {
 function signIn(u) {
   ME = u; ssSet('rc_uid', u.id); lsSet('rc_last', u.id);
   $('#auth').hidden = true; $('#auth').innerHTML = '';
-  go(tab); toast(`Signed in as ${esc(u.name)}`);
+  go(tab); toast(`Signed in as ${esc(u.name)}`); laterArchive();
 }
+const laterArchive = () => setTimeout(() => runArchive().catch(() => {}), 6000);
 function signOut(msg) {
   closeUM();
   ME = null; ssSet('rc_uid', null); $('#ov').classList.remove('on'); $('#ov').innerHTML = '';
@@ -1954,7 +2025,7 @@ function signOut(msg) {
 function startAuth() {
   if (authReady) return; authReady = true;
   const u = S.users.get(ssGet('rc_uid'));
-  if (u && u.status !== 'inactive') { ME = u; $('#auth').hidden = true; go(tab); } else showAuth();
+  if (u && u.status !== 'inactive') { ME = u; $('#auth').hidden = true; go(tab); laterArchive(); } else showAuth();
 }
 function changeMyPin() {
   if (!can('pin.self')) return toast('Your privilege does not allow changing your PIN. Ask a General Manager.', 1);
@@ -2104,7 +2175,7 @@ function deviceScreen(note) {
 }
 async function bootFirebase() {
   setMode('connecting');
-  try { for (const m of ['app', 'auth', 'firestore']) await loadJS(FB_SDK + m + '-compat.js'); }
+  try { for (const m of ['app', 'auth', 'firestore']) await loadJS(LIB + 'firebase-' + m + '-compat.js').catch(() => loadJS(FB_SDK + m + '-compat.js')); }
   catch { setMode('error'); $('#auth').hidden = false;
     $('#auth').innerHTML = `<div class="auth-card">${markHtml()}<h1>Cannot reach Firebase</h1><p>Check the internet connection, then reload this page.</p><button class="btn solid t-ink" onclick="location.reload()">Reload</button></div>`; return; }
   firebase.initializeApp(FIREBASE_CONFIG);
@@ -2120,14 +2191,18 @@ async function bootFirebase() {
 }
 function fbLive(user) {
   DB = FS; showAuth('loading');
-  const cols = Object.keys(S), seen = new Set(), live = new Set(); let begun = false, denied = false;
+  const cols = [...Object.keys(S), 'archive'], seen = new Set(), live = new Set(); let begun = false, denied = false;
   const begin = () => { if (begun) return; begun = true; migrateBranches(); startAuth(); };
   const status = () => setMode(live.size === cols.length ? 'online' : 'offline');
   const timer = setTimeout(() => { if (seen.size === cols.length) { begin(); status(); } else setMode('slow'); }, 8000);
   for (const c of cols) FS.collection(c).onSnapshot({ includeMetadataChanges: true }, snap => {
     const changed = !seen.has(c) || snap.docChanges().length > 0;
     seen.add(c); snap.metadata.fromCache ? live.delete(c) : live.add(c);
-    if (changed) S[c] = new Map(snap.docs.map(d => [d.id, d.data()]));
+    if (changed) {
+      if (c === 'archive') setBundles(snap.docs.map(d => ({ ...d.data(), id: d.id })));
+      else if (LIVE[c]) { LIVE[c] = new Map(snap.docs.map(d => [d.id, d.data()])); compose(c); }
+      else S[c] = new Map(snap.docs.map(d => [d.id, d.data()]));
+    }
     if (live.size === cols.length) { clearTimeout(timer); begin(); }
     if (begun) status();
     if (changed) refresh();
