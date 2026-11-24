@@ -1896,7 +1896,8 @@ TABS.settings = {
       const d = Object.fromEntries(new FormData(e.target)); saveCfg({ ageWH: +d.ageWH, ageSup: +d.ageSup, ageCN: +d.ageCN, ageGood: +d.ageGood, ageRej: +d.ageRej }, 'Alert limits saved'); };
     $('#myPin').onclick = changeMyPin; $('#signOut2').onclick = () => signOut();
     $('#addUser').onclick = () => editUser(); $('#addRole').onclick = addRole;
-    $('#userList').onclick = e => { const b = e.target.closest('[data-u]'); if (b) editUser(S.users.get(b.dataset.u)); };
+    $('#userList').onclick = e => { const d = e.target.closest('[data-du]'); if (d) return delUser(S.users.get(d.dataset.du));
+      const b = e.target.closest('[data-u]'); if (b) editUser(S.users.get(b.dataset.u)); };
     $('#roleList').onclick = e => { const b = e.target.closest('[data-role]'); if (!b) return;
       const go2 = () => { selRole = b.dataset.role; roleDraft = null; this.renderRoles(); };
       if ($('#reSave') && !$('#reSave').disabled) confirmBox('Discard changes?', 'You have unsaved changes to this privilege.', 'Discard', 't-ng', go2); else go2(); };
@@ -2067,7 +2068,7 @@ function userTable() {
       <td><span class="badge plain t-ink">${esc(roleOf(u)?.name || u.role)}</span></td>
       <td>${allStores(u) ? '<span class="sub">All stores</span>' : (u.outlets || []).map(o => `<span class="badge plain t-tl" style="margin:2px 4px 2px 0">${esc(o)}</span>`).join('')}</td>
       <td>${u.status === 'inactive' ? '<span class="badge t-disp">Inactive</span>' : '<span class="badge t-good">Active</span>'}</td>
-      <td class="r"><button class="btn sm" type="button" data-u="${u.id}">${ic('edit',14)} Edit</button></td></tr>`).join('')}</tbody></table></div>`;
+      <td class="r nowrap"><button class="btn sm" type="button" data-u="${u.id}">${ic('edit',14)} Edit</button>${ME?.role === 'gm' && u.id !== ME.id ? `<button class="btn sm ghost" type="button" data-du="${u.id}" title="Delete user">${ic('trash',14)}</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`;
 }
 function editUser(u) {
   if (!can('adm.users')) return toast('Your privilege does not allow managing users.', 1);
@@ -2117,6 +2118,16 @@ function editUser(u) {
   f.role.addEventListener('change', info); info();
   f.st_ALL.addEventListener('change', () => { if (f.st_ALL.checked) f.querySelectorAll('.store-pick input:not([name=st_ALL])').forEach(x => x.checked = false); });
   f.querySelectorAll('.store-pick input:not([name=st_ALL])').forEach(x => x.addEventListener('change', () => { if (x.checked) f.st_ALL.checked = false; }));
+}
+function delUser(u) {
+  if (!u || ME?.role !== 'gm') return toast('Only a General Manager can delete users.', 1);
+  if (u.id === ME.id) return toast('You cannot delete your own user.', 1);
+  if (u.role === 'gm' && u.status !== 'inactive' && gmCount() <= 1) return toast('Keep at least one active General Manager', 1);
+  confirmBox('Delete this user?', `<b>${esc(u.name)}</b> (${esc(u.uid)}) can no longer sign in, and is removed from the list. Lines they entered stay.`, 'Delete user', 't-ng',
+    async () => {
+      if (FS && u.fbUid) { await FS.collection('members').doc(u.fbUid).delete().catch(() => {}); await FS.collection('logins').doc(u.uid).delete().catch(() => {}); }
+      await remove('users', u.id); toast(`User ${esc(u.name)} deleted`);
+    });
 }
 function addRole() {
   modal({ title: 'Add privilege', sub: 'Start empty or copy the permissions of an existing privilege.', ok: 'Add privilege',
