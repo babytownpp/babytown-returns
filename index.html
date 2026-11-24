@@ -2276,8 +2276,8 @@ async function bootFirebase() {
   catch { setMode('error'); $('#auth').hidden = false;
     $('#auth').innerHTML = `<div class="auth-card">${markHtml()}<h1>Cannot reach Firebase</h1><p>Check the internet connection, then reload this page.</p><button class="btn solid t-ink" onclick="location.reload()">Reload</button></div>`; return; }
   firebase.initializeApp(FIREBASE_CONFIG);
-  /* signed in until the browser is closed or the user signs out (shared shop devices) */
-  try { await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION); } catch {}
+  /* stays signed in on this device, also after closing the browser, until the user signs out */
+  try { await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL); } catch {}
   FS = firebase.firestore();
   try { FS.settings({ ignoreUndefinedProperties: true, merge: true }); } catch {}
   try { await FS.enablePersistence({ synchronizeTabs: true }); } catch {}   /* a copy stays on this device: it opens and saves offline */
