@@ -569,12 +569,12 @@ const PERMS = [
   ['set.branches', 'Branches / stores', 'Add, rename or remove branches and stores'],
   ['set.limits',   'Alert limits', 'Change the days before a line shows as overdue'],
   ['set.suppliers','Supplier list', 'Add, edit and remove suppliers and their contacts'],
-  ['adm.users',    'Manage users', 'Add users, edit them, reset PINs, set active or inactive'],
+  ['adm.users',    'Manage users', 'Add users, edit them, reset PINs or passwords, set active or inactive'],
   ['adm.roles',    'Change privileges', 'Create, edit and delete privileges'],
   ['adm.restore',  'Restore backup', 'Load a backup file into the app'],
   ['adm.wipe',     'Delete all data', 'Remove every line, supplier, user and setting'],
   ['adm.import',   'Import from Excel', 'Load lines and suppliers from the Excel master list'],
-  ['pin.self',     'Change own PIN', 'Change the PIN of their own account'],
+  ['pin.self',     'Change own PIN', 'Change the PIN or password of their own account'],
 ];
 const DEFAULT_ROLES = [
   { id: 'gm',   name: 'General Manager',   perms: PERMS.map(p => p[0]), locked: true },
@@ -1825,7 +1825,7 @@ TABS.settings = {
           <div class="avatar lg">${esc(initials(ME?.name))}</div>
           <div class="acct-info"><b>${esc(ME?.name || '')}</b><span>User ID ${esc(ME?.uid || '')}</span>
             <span class="badge plain t-ink">${esc(roleOf(ME)?.name || '')}</span><span class="sub">Stores: ${allStores(ME) ? 'All stores' : esc((ME?.outlets || []).join(', '))}</span></div>
-          <div class="acct-act">${can('pin.self') ? '' : '<span class="sub" style="align-self:center">To change your PIN, ask a General Manager.</span>'}<button class="btn" type="button" id="myPin">${ic('key',15)} Change my PIN</button><button class="btn" type="button" id="signOut2">Sign out</button></div>
+          <div class="acct-act">${can('pin.self') ? '' : `<span class="sub" style="align-self:center">To change your ${FS ? 'password' : 'PIN'}, ask a General Manager.</span>`}<button class="btn" type="button" id="myPin">${ic('key',15)} Change my ${FS ? 'password' : 'PIN'}</button><button class="btn" type="button" id="signOut2">Sign out</button></div>
         </div></section>
 
       <section class="panel sec" data-sec="data">
@@ -1835,8 +1835,8 @@ TABS.settings = {
             <button class="btn" id="bkDl">${ic('dl',15)} Download backup</button>
             <label class="btn" style="cursor:pointer" id="bkUpLbl">${ic('ul',15)} Restore from backup<input type="file" id="bkUp" accept=".json,application/json" hidden></label>
             <span class="sub" style="flex-basis:100%">${plural(S.ng.size,'Not Good line')}, ${plural(S.good.size,'good stock line')}, ${plural(S.suppliers.size,'supplier')}, ${plural(S.users.size,'user')}</span></div></div>
-        ${FS ? `<div class="set-grid" id="devSec"><div><h3>This device</h3><p>Connected to Firebase as <b>${esc(acctName(firebase.auth().currentUser?.email))}</b>. Every connected device sees the same data, live.${ARCOF.size ? ` ${plural(ARCOF.size, 'finished record')} older than ${ARC_DAYS} days ${ARCOF.size === 1 ? 'is' : 'are'} packed into ${plural(ARCB.size, 'archive page')} to stay inside the free Firebase limits.` : ''}</p></div>
-          <div>${ME?.role === 'gm' ? `<button class="btn" type="button" id="devOut">${ic('lock',15)} Disconnect this device</button>` : '<span class="sub">Only a General Manager can disconnect a device.</span>'}</div></div>` : ''}
+        ${FS ? `<div class="set-grid" id="devSec"><div><h3>Firebase</h3><p>Data is shared live through Firebase with every signed-in device.${ARCOF.size ? ` ${plural(ARCOF.size, 'finished record')} older than ${ARC_DAYS} days ${ARCOF.size === 1 ? 'is' : 'are'} packed into ${plural(ARCB.size, 'archive page')} to stay inside the free Firebase limits.` : ''}</p></div>
+          <div></div></div>` : ''}
         <div class="set-grid" id="excelSec"><div><h3>Excel master list</h3><p>Export to the same layout as the Excel master list, or import lines from it. Columns are matched by their headers.</p></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start">
             <button class="btn" type="button" id="xlExp">${ic('dl',15)} Export to Excel</button>
@@ -1932,8 +1932,6 @@ TABS.settings = {
         onOk: async () => { await restoreBackup(o); toast('Backup restored'); go('settings'); } });
     };
     $('#xlExp').onclick = exportExcel;
-    $('#devOut') && ($('#devOut').onclick = () => confirmBox('Disconnect this device?', 'The app on this device closes. Nobody can open it here again until the company account signs in.', 'Disconnect', 't-ng',
-      async () => { ssSet('rc_uid', null); await firebase.auth().signOut(); }));
     $('#xlImp').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) importExcel(f); };
     $('#wipe').onclick = () => { if (guard()) return; if (!can('adm.wipe')) return toast('Your privilege does not allow this.', 1);
       const f = modal({ title: 'Delete all data?', tone: 't-ng', ok: 'Delete everything', okDisabled: true,
@@ -2019,6 +2017,7 @@ function signIn(u) {
 const laterArchive = () => setTimeout(() => runArchive().catch(() => {}), 6000);
 function signOut(msg) {
   closeUM();
+  if (FS) { ME = null; ssSet('fb_note', msg || null); firebase.auth().signOut(); return; }
   ME = null; ssSet('rc_uid', null); $('#ov').classList.remove('on'); $('#ov').innerHTML = '';
   showAuth(); if (msg) toast(msg, 1);
 }
@@ -2028,7 +2027,18 @@ function startAuth() {
   if (u && u.status !== 'inactive') { ME = u; $('#auth').hidden = true; go(tab); laterArchive(); } else showAuth();
 }
 function changeMyPin() {
-  if (!can('pin.self')) return toast('Your privilege does not allow changing your PIN. Ask a General Manager.', 1);
+  if (!can('pin.self')) return toast(`Your privilege does not allow changing your ${FS ? 'password' : 'PIN'}. Ask a General Manager.`, 1);
+  if (FS) return modal({ title: 'Change my password', ok: 'Save password', body: `<div class="fg">
+      <label class="f s2">Current password<input name="old" type="password" autocomplete="current-password" required></label>
+      <label class="f">New password<input name="pw" type="password" minlength="6" autocomplete="new-password" required></label>
+      <label class="f">Confirm new password<input name="pw2" type="password" minlength="6" autocomplete="new-password" required></label></div>`,
+    onOk: async d => {
+      if (d.pw !== d.pw2) { toast('The two new passwords are different', 1); return false; }
+      const cu = firebase.auth().currentUser;
+      try { await cu.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(cu.email, d.old)); await cu.updatePassword(d.pw); }
+      catch (e) { toast(e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password' ? 'Current password is wrong' : fbMsg(e), 1); return false; }
+      toast('Password changed');
+    } });
   modal({ title: 'Change my PIN', ok: 'Save PIN', body: `<div class="fg">
       <label class="f s2">Current PIN<input name="old" type="password" inputmode="numeric" class="pinbox" required></label>
       <label class="f">New PIN (4–6 digits)<input name="pin" type="password" inputmode="numeric" pattern="\\d{4,6}" class="pinbox" required></label>
@@ -2053,7 +2063,7 @@ const visibleUsers = () => [...S.users.values()].filter(u => ME?.role === 'gm' |
 function userTable() {
   const us = visibleUsers().sort((a,b) => (a.status === 'inactive') - (b.status === 'inactive') || a.name.localeCompare(b.name));
   return `<div class="tw"><table><thead><tr><th>User</th><th>Privilege</th><th>Stores</th><th>Status</th><th></th></tr></thead><tbody>
-    ${us.map(u => `<tr class="${u.status === 'inactive' ? 'dim' : ''}"><td><div class="ucell"><span class="avatar">${esc(initials(u.name))}</span><span><b>${esc(u.name)}</b>${u.id === ME?.id ? ' <span class="sub">(you)</span>' : ''}<span class="sub" style="display:block">${esc(u.uid)}</span></span></div></td>
+    ${us.map(u => `<tr class="${u.status === 'inactive' ? 'dim' : ''}"><td><div class="ucell"><span class="avatar">${esc(initials(u.name))}</span><span><b>${esc(u.name)}</b>${u.id === ME?.id ? ' <span class="sub">(you)</span>' : ''}<span class="sub" style="display:block">${esc(u.uid)}${FS && !u.fbUid && u.uid !== OWNER_ID ? ' · <span style="color:#B42318">no password yet</span>' : ''}</span></span></div></td>
       <td><span class="badge plain t-ink">${esc(roleOf(u)?.name || u.role)}</span></td>
       <td>${allStores(u) ? '<span class="sub">All stores</span>' : (u.outlets || []).map(o => `<span class="badge plain t-tl" style="margin:2px 4px 2px 0">${esc(o)}</span>`).join('')}</td>
       <td>${u.status === 'inactive' ? '<span class="badge t-disp">Inactive</span>' : '<span class="badge t-good">Active</span>'}</td>
@@ -2074,7 +2084,11 @@ function editUser(u) {
       <div class="f s2" style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;font-weight:500;color:var(--ink2)">Stores this user can see
         <div class="store-pick"><label><input type="checkbox" name="st_ALL" ${all ? 'checked' : ''}> All stores</label>
           ${BR().map(b => `<label><input type="checkbox" name="st_${esc(b)}" ${!all && (u.outlets || []).includes(b) ? 'checked' : ''}> ${esc(b)}</label>`).join('')}</div></div>
-      ${pinLocked ? `<div class="f s2 sub" style="font-weight:400">To change your own PIN, ask a General Manager.</div>` : `<label class="f">${isNew ? 'PIN (4–6 digits)' : 'New PIN'}<input name="pin" type="password" inputmode="numeric" pattern="\\d{4,6}" class="pinbox" ${isNew ? 'required' : 'placeholder="Leave empty to keep the PIN"'}></label>
+      ${FS ? (u.id === ME?.id ? `<div class="f s2 sub" style="font-weight:400">${can('pin.self') ? 'Change your own password in My account.' : 'To change your own password, ask a General Manager.'}</div>`
+        : `${!isNew && !u.fbUid && u.uid !== OWNER_ID ? '<div class="f s2" style="margin:0;padding:10px 12px;border-radius:8px;background:#FEF3F2;color:#B42318;font-weight:500">This user has no password yet. Give them one so they can sign in.</div>' : ''}
+        <label class="f">${isNew || !u.fbUid ? 'Password (at least 6 characters)' : 'New password'}<input name="pin" type="password" minlength="6" autocomplete="new-password" ${isNew || (!u.fbUid && u.uid !== OWNER_ID) ? 'required' : 'placeholder="Leave empty to keep the password"'}></label>
+        <label class="f">Confirm password<input name="pin2" type="password" minlength="6" autocomplete="new-password" ${isNew || (!u.fbUid && u.uid !== OWNER_ID) ? 'required' : ''}></label>`)
+      : pinLocked ? `<div class="f s2 sub" style="font-weight:400">To change your own PIN, ask a General Manager.</div>` : `<label class="f">${isNew ? 'PIN (4–6 digits)' : 'New PIN'}<input name="pin" type="password" inputmode="numeric" pattern="\\d{4,6}" class="pinbox" ${isNew ? 'required' : 'placeholder="Leave empty to keep the PIN"'}></label>
       <label class="f">Confirm PIN<input name="pin2" type="password" inputmode="numeric" pattern="\\d{4,6}" class="pinbox" ${isNew ? 'required' : ''}></label>`}</div>
       <div class="info t-ink">${PERMS.filter(p => (roleOf({ role: u.role })?.perms || []).includes(p[0]) || u.role === 'gm').map(p => p[1]).join(', ') || 'View only'}</div>`,
     onOk: async d => {
@@ -2082,15 +2096,22 @@ function editUser(u) {
       if (d.role === 'gm' && ME.role !== 'gm') { toast('Only a General Manager can give the General Manager privilege.', 1); return false; }
       const outlets = d.st_ALL ? ['ALL'] : BR().filter(b => d['st_' + b]);
       if (!outlets.length) { toast('Choose at least one store', 1); return false; }
-      if (pinLocked) { d.pin = ''; d.pin2 = ''; }
-      if ((d.pin || '') !== (d.pin2 || '')) { toast('The two PINs are different', 1); return false; }
+      if (pinLocked || (FS && u.id === ME?.id)) { d.pin = ''; d.pin2 = ''; }
+      if ((d.pin || '') !== (d.pin2 || '')) { toast(`The two ${FS ? 'passwords' : 'PINs'} are different`, 1); return false; }
+      if (FS && isNew && d.uid.trim().toLowerCase() === OWNER_ID) { toast('This user ID is kept for the owner account', 1); return false; }
       const id2 = d.uid.trim().toLowerCase();
       if (isNew && [...S.users.values()].some(x => x.uid === id2)) { toast('This user ID is already used', 1); return false; }
       if (!isNew && u.role === 'gm' && u.status !== 'inactive' && (d.role !== 'gm' || d.status === 'inactive') && gmCount() <= 1) { toast('Keep at least one active General Manager', 1); return false; }
       const rec = isNew ? { id: uid(), uid: id2, createdAt: Date.now() } : clone(u);
       Object.assign(rec, { name: d.name.trim(), role: d.role, status: d.status, outlets });
-      if (d.pin) rec.pin = await hashPin(d.pin, rec.id);
-      await put('users', rec); toast(isNew ? `User ${esc(rec.name)} added` : `User ${esc(rec.name)} saved`);
+      const oldFb = rec.fbUid;
+      if (FS && d.pin) {
+        try { const r = await fbCreate(rec.uid, d.pin); rec.fbUid = r.fbUid; rec.fbEmail = r.email; }
+        catch (e) { toast(fbMsg(e), 1); return false; }
+      } else if (d.pin) rec.pin = await hashPin(d.pin, rec.id);
+      await put('users', rec);
+      if (FS) await fbAccess(rec, oldFb);
+      toast(isNew ? `User ${esc(rec.name)} added` : `User ${esc(rec.name)} saved${FS && d.pin && !isNew ? '. The new password works now.' : ''}`);
     } });
   const info = () => { const r = roleOf({ role: f.role.value }); f.querySelector('.info').textContent = 'Can do: ' + (f.role.value === 'gm' ? 'everything' : (PERMS.filter(p => (r?.perms || []).includes(p[0])).map(p => p[1]).join(', ') || 'view only')); };
   f.role.addEventListener('change', info); info();
@@ -2147,30 +2168,95 @@ $('#modeChip').onclick = () => toast(MODE === 'local' ? 'Data is saved only in t
 
 /* ================= Firebase: connect the device once, then live data ================= */
 const loadJS = src => new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = src; sc.onload = ok; sc.onerror = () => no(new Error('load ' + src)); document.head.appendChild(sc); });
-const FB_ERR = { 'auth/invalid-credential': 'Account name or password is wrong.', 'auth/wrong-password': 'Account name or password is wrong.', 'auth/user-not-found': 'Account name or password is wrong.',
-  'auth/invalid-login-credentials': 'Account name or password is wrong.', 'auth/invalid-email': 'Use only letters and numbers in the account name.', 'auth/user-disabled': 'This account is turned off in Firebase.',
-  'auth/too-many-requests': 'Too many tries. Wait a few minutes, then try again.', 'auth/network-request-failed': 'No internet connection. Check it, then try again.' };
+const FB_ERR = { 'auth/invalid-credential': 'User ID or password is wrong.', 'auth/wrong-password': 'User ID or password is wrong.', 'auth/user-not-found': 'User ID or password is wrong.',
+  'auth/invalid-login-credentials': 'User ID or password is wrong.', 'auth/invalid-email': 'Use only letters and numbers in the User ID.', 'auth/user-disabled': 'This user is turned off in Firebase.',
+  'auth/too-many-requests': 'Too many tries. Wait a few minutes, then try again.', 'auth/network-request-failed': 'No internet connection. Check it, then try again.',
+  'auth/weak-password': 'The password must be at least 6 characters.', 'auth/requires-recent-login': 'Sign out and sign in again, then change the password.' };
+const fbMsg = e => FB_ERR[e?.code] || `Firebase error (${esc(e?.code || e?.message || '')})`;
 const markHtml = () => `<div class="mark">${esc(company().split(/\s+/).filter(Boolean).slice(0,2).map(w => w[0]).join('').toUpperCase() || 'RC')}</div>`;
-/* Firebase needs an email, so a plain account name becomes name@babytown.app (no real mailbox needed) */
-const ACCT_DOMAIN = 'babytown.app';
-const acctEmail = v => { v = String(v).trim().toLowerCase(); return v.includes('@') ? v : v + '@' + ACCT_DOMAIN; };
-const acctName = e => String(e || '').replace('@' + ACCT_DOMAIN, '');
-function deviceScreen(note) {
+/* Every user signs in with User ID + password. Firebase needs an email, so "lee" becomes lee@babytown.app (no real mailbox).
+   The owner account (babytown) is created in the Firebase console and can always open the data. */
+const ACCT_DOMAIN = 'babytown.app', OWNER_ID = 'babytown', OWNER_EMAIL = OWNER_ID + '@' + ACCT_DOMAIN;
+const acctName = e => String(e || '').replace(/(\.[a-z0-9]+)?@.*$/, '');
+async function loginEmail(id) {
+  id = String(id).trim().toLowerCase(); if (id.includes('@')) return id;
+  try { const d = await FS.collection('logins').doc(id).get(); if (d.exists && d.data()?.email) return d.data().email; } catch {}
+  return id + '@' + ACCT_DOMAIN;
+}
+function loginScreen(note) {
   note = note || ssGet('fb_note'); ssSet('fb_note', null);
   const el = $('#auth'); el.hidden = false;
-  el.innerHTML = `<div class="auth-card">${markHtml()}<h1>Connect this device</h1>
-    <p>Sign in once with the company account name and password. After that, staff sign in with their own name and PIN.</p>
+  el.innerHTML = `<div class="auth-card">${markHtml()}<h1>${esc(company())}</h1><p>Returns &amp; replacement control. Sign in to continue.</p>
     ${note ? `<div class="info t-ng">${note}</div>` : ''}
-    <form id="devF" autocomplete="on">
-      <label class="f">Account name<input name="em" autocomplete="username" autocapitalize="none" spellcheck="false" required placeholder="e.g. babytown"></label>
+    <form id="fbLogin" autocomplete="on">
+      <label class="f">User ID<input name="id" autocomplete="username" autocapitalize="none" spellcheck="false" required value="${esc(lsGet('rc_lastId', ''))}"></label>
       <label class="f">Password<input name="pw" type="password" autocomplete="current-password" required></label>
-      <button class="btn solid t-ink">Connect device</button>
-      <span class="sub">Only the General Manager enters this. The device stays connected until it is disconnected in Settings.</span></form></div>`;
-  setTimeout(() => $('#devF [name=em]')?.focus(), 50);
-  $('#devF').onsubmit = async e => {
-    e.preventDefault(); const f = e.target, b = f.querySelector('button'); b.disabled = true; b.textContent = 'Connecting…';
-    try { await firebase.auth().signInWithEmailAndPassword(acctEmail(f.em.value), f.pw.value); }
-    catch (err) { b.disabled = false; b.textContent = 'Connect device'; f.pw.value = ''; toast(FB_ERR[err.code] || `Could not connect (${esc(err.code || err.message)})`, 1); }
+      <button class="btn solid t-ink">Sign in</button>
+      <span class="sub">Forgot your password? Ask a General Manager to set a new one.</span></form></div>`;
+  setTimeout(() => $(lsGet('rc_lastId', '') ? '#fbLogin [name=pw]' : '#fbLogin [name=id]')?.focus(), 50);
+  $('#fbLogin').onsubmit = async e => {
+    e.preventDefault(); const f = e.target, btn = f.querySelector('button'); btn.disabled = true; btn.textContent = 'Signing in…';
+    const id = f.id.value.trim().toLowerCase();
+    try { lsSet('rc_lastId', id); await firebase.auth().signInWithEmailAndPassword(await loginEmail(id), f.pw.value); }
+    catch (err) { btn.disabled = false; btn.textContent = 'Sign in'; f.pw.value = ''; toast(fbMsg(err), 1); }
+  };
+}
+/* create a Firebase sign-in for a user without signing the General Manager out (a second, private connection) */
+async function fbCreate(userId, pw) {
+  const sec = (firebase.apps || []).find(a => a.name === 'adder') || firebase.initializeApp(FIREBASE_CONFIG, 'adder');
+  const a = sec.auth(); try { await a.setPersistence(firebase.auth.Auth.Persistence.NONE); } catch {}
+  let email = userId + '@' + ACCT_DOMAIN, cred;
+  try { cred = await a.createUserWithEmailAndPassword(email, pw); }
+  catch (e) { if (e.code !== 'auth/email-already-in-use') throw e;
+    email = `${userId}.${Date.now().toString(36)}@${ACCT_DOMAIN}`; cred = await a.createUserWithEmailAndPassword(email, pw); }
+  const fbUid = cred.user.uid; try { await a.signOut(); } catch {}
+  return { fbUid, email };
+}
+/* who may open the data: one "members" document per active user (checked by the Firestore rules) */
+async function fbAccess(rec, oldFbUid) {
+  if (oldFbUid && oldFbUid !== rec.fbUid) await FS.collection('members').doc(oldFbUid).delete().catch(() => {});
+  if (!rec.fbUid || rec.uid === OWNER_ID) return;
+  if (rec.status === 'inactive') await FS.collection('members').doc(rec.fbUid).delete().catch(writeErr);
+  else await FS.collection('members').doc(rec.fbUid).set({ user: rec.id, uid: rec.uid }).catch(writeErr);
+  if (rec.fbEmail) await FS.collection('logins').doc(rec.uid).set({ email: rec.fbEmail }).catch(writeErr);
+}
+function fbPickUser(user) {
+  authReady = true;
+  const isOwner = user.email === OWNER_EMAIL, all = [...S.users.values()];
+  const u = all.find(x => x.fbUid === user.uid) || (isOwner ? all.find(x => x.uid === OWNER_ID) : null);
+  if (u && u.status !== 'inactive') { if (u.fbUid !== user.uid) put('users', { ...clone(u), fbUid: user.uid }); signIn(u); return; }
+  if (isOwner) return ownerSetup(user);
+  ssSet('fb_note', u ? 'This user is inactive. Ask a General Manager.' : 'This user is not set up in the app yet. Ask a General Manager.');
+  firebase.auth().signOut();
+}
+function ownerSetup(user, note) {
+  const el = $('#auth'); el.hidden = false; const empty = !S.users.size && !S.ng.size;
+  el.innerHTML = `<div class="auth-card">${markHtml()}<h1>${empty ? 'Set up the app' : 'Create your user'}</h1>
+    <p>You signed in with the owner account <b>${OWNER_ID}</b>. It becomes a General Manager, who adds the other users and sets their privileges.</p>
+    ${note ? `<div class="info t-good">${note}</div>` : ''}
+    <form id="ownF" autocomplete="off">
+      <label class="f">Company name<input name="co" value="${esc(company())}" required></label>
+      <label class="f">Your name<input name="name" required></label>
+      <button class="btn solid t-ink">Start</button></form>
+    ${empty ? `<div class="auth-alt"><span class="sub">Moving data from another computer? Load its backup file first.</span>
+      <label class="btn" style="cursor:pointer">${ic('ul',15)} Restore from a backup file<input type="file" id="setupBk" accept=".json,application/json" hidden></label></div>` : ''}</div>`;
+  setTimeout(() => $('#ownF [name=name]')?.focus(), 50);
+  $('#setupBk') && ($('#setupBk').onchange = async e => {
+    const file = e.target.files[0]; e.target.value = ''; if (!file) return;
+    let o; try { o = JSON.parse(await file.text()); } catch { return toast('This file is not a valid backup', 1); }
+    if (!isBackup(o)) return toast('This file is not a backup from this app', 1);
+    await restoreBackup(o);
+    const u = [...S.users.values()].find(x => x.uid === OWNER_ID || x.fbUid === user.uid);
+    if (u) return fbPickUser(user);
+    ownerSetup(user, `Backup restored: ${plural(o.ng.length, 'Not Good line')}. Enter your name to start. Then give each user a password in Settings → Users.`);
+  });
+  $('#ownF').onsubmit = async e => {
+    e.preventDefault(); const d = Object.fromEntries(new FormData(e.target));
+    if (!S.roles.size) for (let i = 0; i < DEFAULT_ROLES.length; i++) await put('roles', { ...clone(DEFAULT_ROLES[i]), order: i, v: 3 });
+    if (d.co.trim() !== cfg().company) await put('settings', { ...clone(cfg()), id: 'app', company: d.co.trim() });
+    const id = uid();
+    await put('users', { id, uid: OWNER_ID, name: d.name.trim(), role: 'gm', outlets: ['ALL'], status: 'active', fbUid: user.uid, createdAt: Date.now() });
+    signIn(S.users.get(id));
   };
 }
 async function bootFirebase() {
@@ -2179,20 +2265,22 @@ async function bootFirebase() {
   catch { setMode('error'); $('#auth').hidden = false;
     $('#auth').innerHTML = `<div class="auth-card">${markHtml()}<h1>Cannot reach Firebase</h1><p>Check the internet connection, then reload this page.</p><button class="btn solid t-ink" onclick="location.reload()">Reload</button></div>`; return; }
   firebase.initializeApp(FIREBASE_CONFIG);
+  /* signed in until the browser is closed or the user signs out (shared shop devices) */
+  try { await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION); } catch {}
   FS = firebase.firestore();
   try { FS.settings({ ignoreUndefinedProperties: true, merge: true }); } catch {}
   try { await FS.enablePersistence({ synchronizeTabs: true }); } catch {}   /* a copy stays on this device: it opens and saves offline */
   let started = false;
   firebase.auth().onAuthStateChanged(u => {
     if (u && !started) { started = true; fbLive(u); }
-    else if (!u && started) location.reload();      /* disconnected: start again at the Connect screen */
-    else if (!u) deviceScreen();
+    else if (!u && started) location.reload();      /* signed out: start again at the sign-in screen */
+    else if (!u) loginScreen();
   });
 }
 function fbLive(user) {
   DB = FS; showAuth('loading');
   const cols = [...Object.keys(S), 'archive'], seen = new Set(), live = new Set(); let begun = false, denied = false;
-  const begin = () => { if (begun) return; begun = true; migrateBranches(); startAuth(); };
+  const begin = () => { if (begun) return; begun = true; migrateBranches(); fbPickUser(user); };
   const status = () => setMode(live.size === cols.length ? 'online' : 'offline');
   const timer = setTimeout(() => { if (seen.size === cols.length) { begin(); status(); } else setMode('slow'); }, 8000);
   for (const c of cols) FS.collection(c).onSnapshot({ includeMetadataChanges: true }, snap => {
@@ -2209,7 +2297,7 @@ function fbLive(user) {
   }, e => {
     clearTimeout(timer); if (denied) return;
     if (e.code === 'permission-denied') { denied = true;
-      ssSet('fb_note', `The account <b>${esc(acctName(user.email))}</b> is not allowed to open this data. Sign in with the company account.`);
+      ssSet('fb_note', `<b>${esc(acctName(user.email))}</b> cannot sign in. The user is inactive or not set up. Ask a General Manager.`);
       firebase.auth().signOut(); }
     else { setMode('error'); toast(`Lost the connection to Firebase (${esc(e.code || '')}). Reload the page.`, 1); }
   });
